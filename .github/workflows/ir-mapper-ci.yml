@@ -2,9 +2,7 @@ name: IR mapper CI
 on:
   push:
     branches: [main]
-    paths: ['custom_components/broadlink_ir_mapper/**', 'tests/ir_mapper/**', 'scripts/package_ir_mapper.py', 'requirements-ir-*.txt', 'pytest.ini', 'hacs.json', 'ruff.toml', 'LICENSE', 'package.json', 'package-lock.json', '.github/workflows/ir-mapper-*.yml']
   pull_request:
-    paths: ['custom_components/broadlink_ir_mapper/**', 'broadlink-ir-mapper/**', 'tests/ir_mapper/**', 'scripts/package_ir_mapper.py', 'requirements-ir-*.txt', 'pytest.ini', 'hacs.json', 'ruff.toml', 'LICENSE', 'package.json', 'package-lock.json', '.github/workflows/ir-mapper-*.yml']
   workflow_dispatch:
   workflow_call:
 permissions:

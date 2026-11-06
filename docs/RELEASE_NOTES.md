@@ -16,3 +16,7 @@
 
 Hardware acceptance results must be recorded here or in the draft release before
 publication. Automated coverage alone does not verify physical IR reception.
+
+- Dedicated `zvikarp/ha-plus-ir-mapper` repository with source-based HACS custom
+  installation; existing HA domains, unique IDs, configuration, and learned
+  commands remain compatible.

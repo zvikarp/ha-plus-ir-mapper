@@ -1,6 +1,4 @@
 {
   "name": "HA+ IR Mapper",
-  "homeassistant": "2025.1.3",
-  "zip_release": true,
-  "filename": "broadlink_ir_mapper.zip"
+  "homeassistant": "2025.1.3"
 }

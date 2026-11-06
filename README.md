@@ -1,6 +1,6 @@
 # HA+ IR Mapper (BroadLink)
 
-<img src="../resources/ha-plus-ir-mapper.png" alt="HA+ BroadLink IR Mapper" width="140">
+<img src="./resources/ha-plus-ir-mapper.png" alt="HA+ BroadLink IR Mapper" width="140">
 
 A local Home Assistant integration that exposes IR-controlled lights through an
 existing BroadLink remote. It maps power, preset RGB colors, effects, and relative
@@ -15,16 +15,15 @@ and a reachable `remote.*` entity. CI covers HA 2025.1.3 and 2026.10.4.
 
 ### HACS custom repository
 
-After the first IR mapper release has been published:
-
-1. Add `https://github.com/zvikarp/ha-plus` to HACS custom repositories as an
+1. Add `https://github.com/zvikarp/ha-plus-ir-mapper` to HACS custom repositories as an
    **Integration** (not an add-on or dashboard card).
 2. Install **HA+ IR Mapper** and restart Home Assistant.
 3. Follow guided setup below. Existing YAML installations continue to work.
 
-The integration is not in HACS's default catalog. The repository's HACS metadata
-selects the `broadlink_ir_mapper.zip` release asset. Until a published release
-contains that asset, use the source installation below.
+HACS installs directly from this repository's `custom_components` directory;
+a GitHub Release is not required for custom-repository installation. This is not
+a listing in HACS's default catalog. Versioned ZIP releases remain available
+through the manual release workflow after hardware verification.
 
 ### Manual installation
 
@@ -34,13 +33,12 @@ extract `broadlink_ir_mapper.zip` into that same destination. The archive contai
 `manifest.json` and Python files directly at its root.
 
 The final path must be `config/custom_components/broadlink_ir_mapper/light.py`.
-The `broadlink-ir-mapper` directory contains documentation, not integration code.
+The `docs` directory contains documentation, not integration code.
 Restart Home Assistant after installation or an upgrade.
 
 ## Guided setup and learning
 
-1. In **Settings → Devices & services → Add integration**, choose **BroadLink IR
-   Remote Mapper**. Select an available BroadLink remote and name the light.
+1. In **Settings → Devices & services → Add integration**, choose **HA+ IR Mapper**. Select an available BroadLink remote and name the light.
 2. Enter its brightness steps: the approximate number of presses from minimum to
    maximum. Leave 10 if unknown; adjust after checking your remote.
 3. Choose **Learn or replace a button**, select its function, and submit. Point
@@ -121,7 +119,7 @@ Replace every placeholder with an actual learned code before validating the
 configuration. Invalid base64, RGB values, and non-remote entity IDs are rejected.
 `name`, `broadlink_remote`, and both power codes are required. `unique_id` is
 optional but recommended for entity registry management. See
-[example-configuration.yaml](example-configuration.yaml) for the same structure.
+[example-configuration.yaml](docs/example-configuration.yaml) for the same structure.
 
 Use standard `light.turn_on` / `light.turn_off` actions, with `rgb_color`,
 `effect`, or `brightness` as appropriate. Requested RGB colors select the closest
@@ -153,6 +151,22 @@ effects must be configured on the card separately.
   sent at startup. Physical remote changes and device power resets cannot be
   detected; send power and settings explicitly to resynchronize.
 
+## Moving from the `ha-plus` repository
+
+Back up your Home Assistant configuration and installed integration files first.
+If HACS installed this integration from `zvikarp/ha-plus`, remove that old HACS
+installation/custom-repository entry, then add `zvikarp/ha-plus-ir-mapper` as an
+Integration and download it **before restarting Home Assistant**. Removing a HACS
+installation removes its code; do not delete the integration from HA's Devices &
+services, its config entries, or entity registry records. If the old install was
+manual, replace the files in the same directory with the new repository's copy.
+
+The domain, config entry version, entity unique IDs, YAML keys, learned-command
+references, and installed directory are unchanged. Do not recreate devices or
+relearn buttons. After the new files are installed, restart HA and verify the
+existing entities and automations. For rollback, restore your backed-up files;
+keep HA configuration and BroadLink storage intact.
+
 ## Upgrading and rollback
 
 The domain `broadlink_ir_mapper`, YAML keys, and `unique_id` values are unchanged.
@@ -166,10 +180,10 @@ back may also require the previous HA version.
 
 ## Validation and release
 
-See [RELEASING.md](RELEASING.md) for automated checks, the hardware acceptance
+See [RELEASING.md](docs/RELEASING.md) for automated checks, the hardware acceptance
 checklist, and the manual draft-release workflow. A version in the manifest is
 not proof that a release has been published or tested with hardware.
 
 Report problems with HA version, sanitized configuration, and logs at
-[GitHub Issues](https://github.com/zvikarp/ha-plus/issues). Never include private
+[GitHub Issues](https://github.com/zvikarp/ha-plus-ir-mapper/issues). Never include private
 Home Assistant storage files in an issue.

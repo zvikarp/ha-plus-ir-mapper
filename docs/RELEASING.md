@@ -47,12 +47,14 @@ by CI. No completed hardware test is claimed by this change.
 9. Check the HA+ IR panel and dashboard card in light/dark themes at mobile and
    desktop widths; verify keyboard controls, errors, preset/effect selection,
    unavailable state, one slider submission per drag, and resynchronization.
-10. After publishing the draft, verify HACS custom-repository installation and
-   update using the released ZIP; this distribution check is separate from CI.
+10. Verify HACS custom-repository installation from `zvikarp/ha-plus-ir-mapper`
+   and subsequent updates. HACS installs from source; independently verify the
+   release ZIP for manual installation when publishing a release.
 
 ## Build and publish
 
-The HACS integration is under `custom_components/broadlink_ir_mapper`; add-on and
+HACS installs the integration directly from source, including before a first
+release. The integration is under `custom_components/broadlink_ir_mapper`; add-on and
 card files are not included in its archive. `scripts/package_ir_mapper.py` creates
 `broadlink_ir_mapper.zip`, with only integration files at the archive root.
 

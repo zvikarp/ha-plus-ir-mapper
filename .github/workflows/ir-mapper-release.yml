@@ -41,4 +41,4 @@ jobs:
           gh release create "$IR_RELEASE_TAG" broadlink_ir_mapper.zip
           --target "$GITHUB_SHA" --draft
           --title "BroadLink IR Mapper ${IR_RELEASE_TAG#v}"
-          --notes-file broadlink-ir-mapper/RELEASE_NOTES.md
+          --notes-file docs/RELEASE_NOTES.md
