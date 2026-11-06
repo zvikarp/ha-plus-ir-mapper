@@ -6,12 +6,12 @@ From the repository root, create a Python 3.13 environment and run:
 
 ```sh
 pip install -r requirements-ir-minimum.txt
-ruff check custom_components/broadlink_ir_mapper tests/ir_mapper scripts/package_ir_mapper.py
-ruff format --check custom_components/broadlink_ir_mapper tests/ir_mapper scripts/package_ir_mapper.py
+ruff check custom_components/broadlink_ir_mapper tests/ir_mapper scripts
+ruff format --check custom_components/broadlink_ir_mapper tests/ir_mapper scripts
 npm ci --ignore-scripts
 npm test
 pytest
-python scripts/package_ir_mapper.py
+python scripts/release.py package
 ```
 
 Repeat in a separate Python 3.14 environment using
@@ -55,15 +55,24 @@ by CI. No completed hardware test is claimed by this change.
 
 HACS installs the integration directly from source, including before a first
 release. The integration is under `custom_components/broadlink_ir_mapper`; add-on and
-card files are not included in its archive. `scripts/package_ir_mapper.py` creates
+card files are not included in its archive. `scripts/release.py package` creates
 `broadlink_ir_mapper.zip`, with only integration files at the archive root.
 
-On `main`, run **Actions → Release IR mapper**, enter
-`v<manifest version>`, and check the hardware verification checkbox only
-after completing the checks above. The workflow reruns both CI jobs and creates
-an immutable-tagged **draft** release with the ZIP. It refuses a tag that differs
-from the manifest version. Existing tags/releases are not overwritten.
+There are only two workflows: **CI** and **Release**. CI checks pull requests and
+`main`, and produces a test ZIP artifact.
 
-Review the draft, add actual hardware results, and publish it when ready. For
-later releases, update the manifest version and release notes in a reviewed PR
-first. No release is published automatically by merging a PR.
+On `main`, run **Actions → Release → Run workflow** and choose **patch**, **minor**,
+or **major**. Release runs CI first, prepares the next stable version, commits a
+manifest bump when needed, builds `broadlink_ir_mapper.zip`, and publishes a
+GitHub Release with generated notes. Like HA+ Modes, a source version already
+ahead of the latest stable release is released first (including the initial
+1.0.0); otherwise the selected bump applies to the latest stable version. Drafts,
+prereleases, and non-version tags do not determine the next stable version.
+
+HACS follows the published releases. Its source installation remains available
+before the first release; the attached ZIP also supports manual installation.
+Publishing a release manually runs CI and attaches the archive from that tag;
+a mismatched tag/manifest version is rejected. No release is published merely by
+merging a PR, and existing tags/releases are not overwritten. Complete the
+hardware acceptance checks before publishing; the workflow does not claim a
+physical hardware test.

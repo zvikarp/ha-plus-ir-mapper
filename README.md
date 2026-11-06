@@ -23,7 +23,7 @@ and a reachable `remote.*` entity. CI covers HA 2025.1.3 and 2026.10.4.
 HACS installs directly from this repository's `custom_components` directory;
 a GitHub Release is not required for custom-repository installation. This is not
 a listing in HACS's default catalog. Versioned ZIP releases remain available
-through the manual release workflow after hardware verification.
+through **Actions → Release**, with patch/minor/major version selection.
 
 ### Manual installation
 
