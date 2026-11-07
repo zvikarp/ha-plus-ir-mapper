@@ -30,6 +30,7 @@ jobs:
           node-version: '24'
       - run: npm ci --ignore-scripts
       - run: node --check custom_components/broadlink_ir_mapper/frontend/ir-mapper.js
+      - run: npm run check:build
       - run: npm test
       - run: pytest
       - run: python scripts/release.py package

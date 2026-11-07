@@ -140,3 +140,15 @@ test("unrelated HA updates preserve the current slider element", async () => {
 	};
 	assert.equal(card.shadowRoot.querySelector("input"), slider);
 });
+
+test('panel and card share control styles and color presets use the package helper', async () => {
+  const { controlStyles } = await import('@ha-plus/ui');
+  const { card, hass, window } = await setup();
+  const panel = window.document.createElement('ha-plus-ir-panel');
+  panel.hass = hass;
+  for (const view of [card, panel]) {
+    assert.equal(view.shadowRoot.querySelector('style').textContent, controlStyles);
+    assert.equal(view.shadowRoot.querySelectorAll('style').length, 1);
+  }
+  assert.equal(card.shadowRoot.querySelector('.swatch').style.backgroundColor, 'rgb(255,90,80)');
+});
