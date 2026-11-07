@@ -187,3 +187,12 @@ not proof that a release has been published or tested with hardware.
 Report problems with HA version, sanitized configuration, and logs at
 [GitHub Issues](https://github.com/zvikarp/ha-plus-ir-mapper/issues). Never include private
 Home Assistant storage files in an issue.
+
+## Shared UI development
+
+Edit `src/ir-mapper.js` and run `npm ci`, `npm run build` and `npm test`.
+Commit the generated integration frontend with its source. The pinned
+[`@ha-plus/ui`](https://github.com/zvikarp/ha-plus-packages) release contains
+all styling and shared controls. Add reusable presentation to the package
+instead of app-local CSS or style writes. CI checks generated-file drift.
+HACS installations contain the complete bundle and require no browser CDN.
