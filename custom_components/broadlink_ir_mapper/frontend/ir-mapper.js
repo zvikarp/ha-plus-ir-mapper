@@ -1369,6 +1369,12 @@
       });
     }
     _save(another) {
+      if (this._invalidHex) {
+        this._error = "Enter a six-digit color hex value, such as #ff8000.";
+        this._tab = "commands";
+        this.render();
+        return;
+      }
       if (!this._validSettings()) {
         this._tab = "settings";
         this.render();
@@ -1419,6 +1425,11 @@
       form.disabled = this._busy;
       return form;
     }
+    _setColor(command, rgb) {
+      command.rgb = rgb;
+      const saved = this._data.colors.find((color) => color.name === command.name);
+      if (saved) saved.rgb = rgb;
+    }
     _details() {
       const command = this._selected;
       const details = el("section", void 0, "remote-command-details");
@@ -1434,22 +1445,25 @@
           ] } }
         }], { preset: defaultColors.some(([, hex2]) => hex2 === currentHex) ? currentHex : "custom" }, (values) => {
           if (values.preset === "custom") return;
-          command.rgb = hexToRgb(values.preset);
+          this._setColor(command, hexToRgb(values.preset));
+          command.hex = values.preset;
           this._hex.value = values.preset;
           this._invalidHex = false;
           this._hex.invalid = false;
           learn.disabled = this._busy;
         });
-        const hex = nativeTextField("Custom color hex (#RRGGBB)", rgbToHex(command.rgb), (value) => {
+        const hex = nativeTextField("Custom color hex (#RRGGBB)", command.hex ?? rgbToHex(command.rgb), (value) => {
           const rgb = hexToRgb(value);
           hex.invalid = !rgb;
-          if (rgb) command.rgb = rgb;
+          command.hex = value;
+          if (rgb) this._setColor(command, rgb);
           this._invalidHex = !rgb;
           palette.data = { preset: defaultColors.some(([, hex2]) => hex2.toLowerCase() === value.toLowerCase()) ? value.toLowerCase() : "custom" };
           learn.disabled = this._busy || !rgb;
         });
         this._hex = hex;
         hex.disabled = this._busy;
+        hex.invalid = Boolean(this._invalidHex);
         palette.disabled = this._busy;
         details.append(palette, hex);
       }
@@ -1461,10 +1475,6 @@
           entity_id: this._data.broadlink_remote,
           ...typeof command.ref === "string" ? { command: "b64:" + command.ref.replace(/^b64:/, "") } : command.ref
         })), this._busy));
-        if (command.kind === "colors") actions.append(button("Update color", () => {
-          if (this._invalidHex) return;
-          this._commit(command, command.ref);
-        }, this._busy));
         actions.append(button("Remove command", () => {
           if (command.kind === "ir_codes") delete this._data.ir_codes[command.key];
           else this._data[command.kind] = this._data[command.kind].filter((item) => item.name !== command.name);

@@ -206,11 +206,11 @@ test("IR editing preserves commands until confirmed and accepts custom hex color
   const hex = editor.shadowRoot.querySelector("ha-textfield");
   hex.value = "#1234ab";
   hex.dispatchEvent(new window.Event("input"));
-  find("Update color").click();
   assert.deepEqual(Array.from(editor._data.colors[0].rgb), [18,52,171]);
   find("Save").click();
   await tick();
   assert.equal(calls.at(-1).entry_id, "existing");
   assert.equal(calls.at(-1).device_id, "original");
   assert.equal(calls.at(-1).revision, "before");
+  assert.deepEqual(Array.from(calls.at(-1).definition.colors[0].rgb), [18,52,171]);
 });
