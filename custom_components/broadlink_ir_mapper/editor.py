@@ -107,6 +107,15 @@ async def save_device(hass, connection, msg):
                         None,
                     )
                     if saved:
+                        retry_data = {
+                            **msg["definition"],
+                            "unique_id": saved["unique_id"],
+                            "learned_device": saved["learned_device"],
+                        }
+                        if validate_definition(retry_data) != saved:
+                            raise vol.Invalid(
+                                "This light was already saved. Reopen it to make changes"
+                            )
                         connection.send_result(
                             msg["id"],
                             {
