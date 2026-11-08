@@ -1,4 +1,8 @@
-import { controlStyles, el as node, colorSwatch } from "@ha-plus/ui";
+import messages from "./translations/en.json";
+import { localize, haContext } from "@ha-plus/ui";
+const t = (key, values) => localize(haContext(), messages, key, values);
+
+import { controlStyles, el as node, colorSwatch, button, icon, notice, panelHeader, iconButton, overflowMenu, integrationUrl, navigate, showMoreInfo, showToast, applyPreferences, formatNumber, loadNativeSlider, nativeSlider } from "@ha-plus/ui";
 
 /* HA+ IR: one theme-aware control surface shared by the panel and dashboard. */
 const manageUrl = "/config/integrations/integration/broadlink_ir_mapper";
@@ -7,6 +11,8 @@ const devices = (hass) =>
 	Object.values(hass?.states || {}).filter((s) => s.attributes?.ir_mapper);
 
 class IRCard extends HTMLElement {
+  _t(key, values) { return localize(this._hass, messages, key, values); }
+
 	constructor() {
 		super();
 		this.attachShadow({ mode: "open" });
@@ -19,12 +25,20 @@ class IRCard extends HTMLElement {
 	}
 	set hass(value) {
 		this._hass = value;
+        applyPreferences(this, value);
+        if (value.connection && !this._nativeLoading && !this._nativeReady) {
+          this._nativeLoading = true;
+          loadNativeSlider(this).then(() => { this._nativeReady = true; this._uiError = undefined; this.render(); })
+            .catch(error => { this._uiError = error.message; this.render(); })
+            .finally(() => { this._nativeLoading = false; });
+        }
 		const entity =
 			value.states[this._config?.entity || devices(value)[0]?.entity_id];
 		const signature = JSON.stringify([
 			entity,
 			value.states[entity?.attributes.ir_remote]?.state,
 			value.user?.is_admin,
+            value.locale,
 		]);
 		if (!this._editing && signature !== this._signature) {
 			this._signature = signature;
@@ -41,12 +55,10 @@ class IRCard extends HTMLElement {
 		return document.createElement("ha-plus-ir-card-editor");
 	}
 	_button(text, action, cls) {
-		const button = node("button", text, cls);
-		button.dataset.focus = cls || text;
-		button.type = "button";
-		button.disabled = this._busy;
-		button.addEventListener("click", action);
-		return button;
+        const control = button(text, action, this._busy, cls);
+        control.dataset.focus = cls || text;
+
+		return control;
 	}
 	async _run(domain, service, data = {}) {
 		if (this._busy) return;
@@ -59,9 +71,12 @@ class IRCard extends HTMLElement {
 				entity_id: this._entityId,
 				...data,
 			});
+            this._retry = undefined;
+            showToast(this, this._t("command_sent"));
 		} catch (err) {
+            this._retry = () => this._run(domain, service, data);
 			this._error =
-				err?.message || "Command failed. Check the BroadLink remote and retry.";
+				err?.message || this._t("command_failed_check_the_broadlink_remote_and_retry");
 		} finally {
 			this._busy = false;
 			this.render();
@@ -82,13 +97,13 @@ class IRCard extends HTMLElement {
 		if (!state || !state.attributes.ir_mapper) {
 			const empty = node("div", undefined, "empty");
 			empty.append(
-				node("h2", "Choose an IR light"),
+				node("h2", this._t("choose_an_ir_light")),
 				node(
 					"p",
-					"Select a HA+ IR entity in the card editor, or add your first device.",
+					this._t("select_a_ha_ir_entity_in_the_card_editor_or_add_your_first_device"),
 				),
 			);
-			const link = node("a", "Set up an IR light");
+			const link = node("a", this._t("set_up_an_ir_light"));
 			link.href = addUrl;
 			empty.append(link);
 			surface.append(empty);
@@ -109,26 +124,29 @@ class IRCard extends HTMLElement {
 			node(
 				"span",
 				unavailable
-					? "Remote unavailable"
+					? this._t("remote_unavailable")
 					: this._busy
-						? "Sending command…"
+						? this._t("sending_command")
 						: on
-							? "On · Assumed state"
-							: "Off · Assumed state",
+							? this._t("on_assumed_state")
+							: this._t("off_assumed_state"),
 			),
 		);
 		heading.append(
 			node("h2", this._config.title || attr.friendly_name || entityId),
 			status,
 		);
-		const power = this._button(
-			undefined,
-			() => this._run("light", on ? "turn_off" : "turn_on"),
-			`power ${on ? "on" : ""}`,
-		);
-		power.setAttribute("aria-label", on ? "Turn off" : "Turn on");
-		power.setAttribute("aria-pressed", String(on));
-		power.disabled ||= unavailable;
+		const powerLabel = on ? this._t("turn_off") : this._t("turn_on");
+        const togglePower = () => this._run("light", on ? "turn_off" : "turn_on");
+        const nativePower = Boolean(customElements.get("ha-icon-button"));
+        const power = nativePower
+          ? iconButton(powerLabel, "mdi:power", togglePower, this._busy || unavailable)
+          : this._button(undefined, togglePower, `power ${on ? "on" : ""}`);
+        power.dataset.focus = "power";
+        power.setAttribute("aria-label", powerLabel);
+        power.setAttribute("aria-pressed", String(on));
+        power.disabled ||= unavailable;
+        if (!nativePower) {
 		const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 		svg.setAttribute("viewBox", "0 0 24 24");
 		svg.setAttribute("aria-hidden", "true");
@@ -140,44 +158,43 @@ class IRCard extends HTMLElement {
 		);
 		svg.append(path);
 		power.append(svg);
-		top.append(heading, power);
+        }
+        const actions = [{ label: this._t("entity_details"), run: () => showMoreInfo(this, entityId) }];
+        if (this._hass.user?.is_admin) actions.push({ label: this._t("integration_settings"), run: () => navigate(this, integrationUrl("broadlink_ir_mapper")) });
+        top.append(heading, power, overflowMenu(actions));
 		surface.append(top);
 		if (attr.ir_dimmable) {
 			const section = node("section", undefined, "controls"),
 				label = node("label", undefined, "label");
 			label.htmlFor = "brightness";
 			label.append(
-				node("span", "Brightness"),
+				node("span", this._t("brightness")),
 				node(
 					"span",
-					`${Math.round(((attr.brightness || 0) / 255) * 100)}% · Estimated`,
+					this._t("estimated", { value1: Math.round(((attr.brightness || 0) / 255) * 100) }),
 				),
 			);
-			const input = node("input");
-			input.type = "range";
-			input.dataset.focus = "brightness";
-			input.id = "brightness";
-			input.min = "1";
-			input.max = "255";
-			input.value = String(attr.brightness || 255);
-			input.disabled = this._busy || unavailable;
-			input.addEventListener("input", () => {
-				this._editing = true;
-				label.lastChild.textContent = `${Math.round((input.value / 255) * 100)}% · Release to send`;
-			});
-			input.addEventListener("change", () => {
-				this._editing = false;
-				this._run("light", "turn_on", { brightness: Number(input.value) });
-			});
-			input.addEventListener("blur", () => {
-				this._editing = false;
-			});
+            const input = nativeSlider({
+              label: this._t("brightness"), min: 1, max: 255, value: Number(attr.brightness || 255),
+              disabled: this._busy || unavailable, hass: this._hass,
+              preview: value => {
+                this._editing = true;
+                label.lastChild.textContent = this._t("release_to_send", { value1: formatNumber(this._hass, Math.round(value / 255 * 100)) });
+              },
+              change: value => {
+                this._editing = false;
+                this._run("light", "turn_on", { brightness: value });
+              },
+            });
+            input.dataset.focus = "brightness";
+            input.id = "brightness";
+            input.addEventListener("blur", () => { this._editing = false; });
 			section.append(
 				label,
 				input,
 				node(
 					"div",
-					`${attr.ir_brightness_steps} steps · IR brightness is approximate`,
+					this._t("steps_ir_brightness_is_approximate", { value1: attr.ir_brightness_steps ?? "—" }),
 					"hint",
 				),
 			);
@@ -186,7 +203,7 @@ class IRCard extends HTMLElement {
 		if (attr.ir_colors?.length) {
 			const section = node("section", undefined, "controls"),
 				swatches = node("div", undefined, "swatches");
-			section.append(node("div", "Colors", "label"), swatches);
+			section.append(node("div", this._t("colors"), "label"), swatches);
 			for (const color of attr.ir_colors) {
 				const button = this._button(
 					undefined,
@@ -213,7 +230,7 @@ class IRCard extends HTMLElement {
 		if (attr.effect_list?.length) {
 			const section = node("section", undefined, "controls"),
 				effects = node("div", undefined, "effects");
-			section.append(node("div", "Effects", "label"), effects);
+			section.append(node("div", this._t("effects"), "label"), effects);
 			for (const effect of attr.effect_list) {
 				const button = this._button(
 					effect,
@@ -230,22 +247,22 @@ class IRCard extends HTMLElement {
 			}
 			surface.append(section);
 		}
-		const error = this._error || attr.ir_last_error;
+        const error = this._uiError || this._error || attr.ir_last_error;
 		if (error) {
-			const message = node("div", error, "error");
-			message.setAttribute("role", "alert");
+			const message = notice(error, "error");
+            if (this._retry && !unavailable) message.append(button(this._t("common.retry"), this._retry, this._busy));
 			surface.append(message);
 		}
 		const footer = node("div", undefined, "footer");
 		if (attr.ir_can_resynchronize) {
-			const sync = this._button("Resync to full brightness", () =>
+			const sync = this._button(this._t("resync_to_full_brightness"), () =>
 				this._run("broadlink_ir_mapper", "resynchronize"),
 			);
 			sync.disabled ||= unavailable;
 			footer.append(sync);
 		}
 		if (this._hass.user?.is_admin) {
-			const link = node("a", "Device settings ↗");
+			const link = node("a", this._t("device_settings"));
 			link.href = manageUrl;
 			footer.append(link);
 		}
@@ -254,12 +271,23 @@ class IRCard extends HTMLElement {
 }
 
 class IRPanel extends HTMLElement {
+  _t(key, values) { return localize(this._hass, messages, key, values); }
+
+  set narrow(value) {
+    this._narrow = value;
+    const menu = this.shadowRoot?.querySelector("ha-menu-button");
+    if (menu) menu.narrow = value;
+  }
+
 	constructor() {
 		super();
 		this.attachShadow({ mode: "open" });
 	}
 	set hass(value) {
-		this._hass = value;
+        this._hass = value;
+        applyPreferences(this, value);
+        const menu = this.shadowRoot.querySelector("ha-menu-button");
+        if (menu) menu.hass = value;
 		if (!this._built) {
 			this._built = true;
 			this.build();
@@ -279,35 +307,33 @@ class IRPanel extends HTMLElement {
 			}
 		}
 		this._empty.hidden = states.length > 0;
-		this._count.textContent = `${states.length} ${states.length === 1 ? "device" : "devices"} · Local control`;
+		this._count.textContent = this._t("local_control", { value1: states.length, value2: states.length === 1 ? "device" : "devices" });
 		for (const card of this._grid.children) card.hass = value;
 		this._add.hidden = !value.user?.is_admin;
 	}
 	build() {
 		this.shadowRoot.append(node("style", controlStyles));
-		const header = node("header"),
-			heading = node("div", undefined, "heading");
-		this._count = node("p");
-		heading.append(node("h1", "HA+ IR"), this._count);
-		this._add = node("a", "＋ Add device");
-		this._add.href = addUrl;
-		this._add.className = "primary action-link";
-		header.append(heading, this._add);
+        const add = node("a", this._t("add_device"), "primary action-link");
+        add.href = integrationUrl("broadlink_ir_mapper", true);
+        this._add = add;
+        const header = panelHeader("HA+ IR", { hass: this._hass, narrow: this._narrow, actions: [add] });
+        this._count = node("p", "", "ha-plus-muted");
+        header.querySelector(".ha-plus-header-heading").append(this._count);
 		const main = node("main");
 		main.append(
-			node("p", "Your remotes, made simple", "eyebrow"),
+			node("p", this._t("your_remotes_made_simple"), "eyebrow"),
 			node(
 				"p",
-				"Power, colors, and effects — without reaching for the remote. IR devices report assumed state.",
+				this._t("power_colors_and_effects_without_reaching_for_the_remote_ir_devices_report_assumed_st"),
 				"intro",
 			),
 		);
 		this._empty = node("section", undefined, "surface empty");
 		this._empty.append(
-			node("h2", "Bring your IR lights into HA+"),
+			node("h2", this._t("bring_your_ir_lights_into_ha")),
 			node(
 				"p",
-				"Add a device, choose your BroadLink remote, and learn its buttons. No YAML or copied codes needed.",
+				this._t("add_a_device_choose_your_broadlink_remote_and_learn_its_buttons_no_yaml_or_copied_cod"),
 			),
 		);
 		this._grid = node("div", undefined, "grid");
@@ -316,6 +342,8 @@ class IRPanel extends HTMLElement {
 	}
 }
 class IREditor extends HTMLElement {
+  _t(key, values) { return localize(this._hass, messages, key, values); }
+
 	setConfig(config) {
 		this._config = config;
 		this.render();
@@ -356,7 +384,7 @@ window.customCards.push({
 	type: "ha-plus-ir-card",
 	name: "HA+ IR",
 	description:
-		"Automatic IR presets, effects, brightness, and resynchronization",
+		t("automatic_ir_presets_effects_brightness_and_resynchronization"),
 	preview: true,
 });
 
