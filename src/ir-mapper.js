@@ -2,7 +2,7 @@ import messages from "./translations/en.json";
 import { localize, haContext } from "@ha-plus/ui";
 const t = (key, values) => localize(haContext(), messages, key, values);
 
-import { actionButton, controlStyles, el as node, colorSwatch, button, icon, notice, panelHeader, iconButton, overflowMenu, integrationUrl, navigate, showMoreInfo, showToast, applyPreferences, formatNumber, loadNativeSlider, nativeSlider } from "@ha-plus/ui";
+import { controlStyles, el as node, colorSwatch, button, icon, notice, panelHeader, iconButton, overflowMenu, integrationUrl, navigate, showMoreInfo, showToast, applyPreferences, formatNumber, loadNativeSlider, nativeSlider } from "@ha-plus/ui";
 
 /* HA+ IR: one theme-aware control surface shared by the panel and dashboard. */
 const manageUrl = "/config/integrations/integration/broadlink_ir_mapper";
@@ -313,7 +313,7 @@ class IRPanel extends HTMLElement {
 	}
 	build() {
 		this.shadowRoot.append(node("style", controlStyles));
-        const add = actionButton(this._t("add_device"), () => navigate(this, integrationUrl("broadlink_ir_mapper", true)), false, "accent");
+        const add = button(this._t("add_device"), () => navigate(this, integrationUrl("broadlink_ir_mapper", true)), false, "primary");
         this._add = add;
         const header = panelHeader("HA+ IR Mapper", { hass: this._hass, narrow: this._narrow,
           domain: "broadlink_ir_mapper", iconUrl: "/broadlink_ir_mapper/icon.png",

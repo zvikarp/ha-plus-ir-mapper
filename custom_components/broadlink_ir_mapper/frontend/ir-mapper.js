@@ -59,23 +59,6 @@
   }
 
   // node_modules/@ha-plus/ui/src/native.js
-  function actionButton(label, handler, disabled = false, appearance = "plain") {
-    const modern = Boolean(customElements.get("ha-button"));
-    const node = el(modern ? "ha-button" : "mwc-button", label);
-    node.type = "button";
-    node.disabled = disabled;
-    if (modern) {
-      node.appearance = appearance === "danger" ? "plain" : appearance;
-      node.variant = appearance === "danger" ? "danger" : "brand";
-    } else {
-      node.raised = appearance === "accent";
-      if (appearance === "danger") node.classList.add("destructive");
-    }
-    node.addEventListener("click", () => {
-      if (!node.disabled) handler();
-    });
-    return node;
-  }
   function iconButton(label, name, handler, disabled = false) {
     const node = el("ha-icon-button");
     node.label = label;
@@ -1390,7 +1373,7 @@
     }
     build() {
       this.shadowRoot.append(el("style", controlStyles));
-      const add = actionButton(this._t("add_device"), () => navigate(this, integrationUrl("broadlink_ir_mapper", true)), false, "accent");
+      const add = button(this._t("add_device"), () => navigate(this, integrationUrl("broadlink_ir_mapper", true)), false, "primary");
       this._add = add;
       const header = panelHeader("HA+ IR Mapper", {
         hass: this._hass,
