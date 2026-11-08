@@ -120,8 +120,8 @@ test("panel reuses cards and shows native setup and empty states", async () => {
 	panel.hass = hass;
 	assert.equal(panel.shadowRoot.querySelector("ha-plus-ir-card"), card);
 	assert.match(
-		panel.shadowRoot.querySelector("header a").href,
-		/domain=broadlink_ir_mapper/,
+		panel._add.textContent,
+		/Add device/,
 	);
 	delete hass.states["light.ir"];
 	panel.hass = hass;

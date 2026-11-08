@@ -2,7 +2,7 @@ import messages from "./translations/en.json";
 import { localize, haContext } from "@ha-plus/ui";
 const t = (key, values) => localize(haContext(), messages, key, values);
 
-import { controlStyles, el as node, colorSwatch, button, icon, notice, panelHeader, iconButton, overflowMenu, integrationUrl, navigate, showMoreInfo, showToast, applyPreferences, formatNumber, loadNativeSlider, nativeSlider } from "@ha-plus/ui";
+import { actionButton, controlStyles, el as node, colorSwatch, button, icon, notice, panelHeader, iconButton, overflowMenu, integrationUrl, navigate, showMoreInfo, showToast, applyPreferences, formatNumber, loadNativeSlider, nativeSlider } from "@ha-plus/ui";
 
 /* HA+ IR: one theme-aware control surface shared by the panel and dashboard. */
 const manageUrl = "/config/integrations/integration/broadlink_ir_mapper";
@@ -313,12 +313,12 @@ class IRPanel extends HTMLElement {
 	}
 	build() {
 		this.shadowRoot.append(node("style", controlStyles));
-        const add = node("a", this._t("add_device"), "primary action-link");
-        add.href = integrationUrl("broadlink_ir_mapper", true);
+        const add = actionButton(this._t("add_device"), () => navigate(this, integrationUrl("broadlink_ir_mapper", true)), false, "accent");
         this._add = add;
-        const header = panelHeader("HA+ IR", { hass: this._hass, narrow: this._narrow, actions: [add] });
+        const header = panelHeader("HA+ IR Mapper", { hass: this._hass, narrow: this._narrow,
+          domain: "broadlink_ir_mapper", iconUrl: "/broadlink_ir_mapper/icon.png",
+          onRefresh: () => { this._ids = undefined; this.hass = this._hass; } });
         this._count = node("p", "", "ha-plus-muted");
-        header.querySelector(".ha-plus-header-heading").append(this._count);
 		const main = node("main");
 		main.append(
 			node("p", this._t("your_remotes_made_simple"), "eyebrow"),
@@ -337,7 +337,7 @@ class IRPanel extends HTMLElement {
 			),
 		);
 		this._grid = node("div", undefined, "grid");
-		main.append(this._empty, this._grid);
+		main.append(this._count, add, this._empty, this._grid);
 		this.shadowRoot.append(header, main);
 	}
 }

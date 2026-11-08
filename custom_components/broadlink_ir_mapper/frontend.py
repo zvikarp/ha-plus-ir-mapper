@@ -23,10 +23,15 @@ async def async_register_frontend(hass):
         await hass.http.async_register_static_paths(
             [
                 StaticPathConfig(
+                    "/broadlink_ir_mapper/icon.png",
+                    str(Path(__file__).parent / "brand/icon.png"),
+                    cache_headers=False,
+                ),
+                StaticPathConfig(
                     "/broadlink_ir_mapper/ir-mapper.js",
                     str(Path(__file__).parent / "frontend" / "ir-mapper.js"),
                     cache_headers=False,
-                )
+                ),
             ]
         )
         add_extra_js_url(hass, url)
@@ -34,7 +39,7 @@ async def async_register_frontend(hass):
             hass,
             webcomponent_name="ha-plus-ir-panel",
             frontend_url_path="ha-plus-ir",
-            sidebar_title="HA+ IR",
+            sidebar_title="HA+ IR Mapper",
             sidebar_icon="ha-plus-ir:logo",
             module_url=url,
             require_admin=False,

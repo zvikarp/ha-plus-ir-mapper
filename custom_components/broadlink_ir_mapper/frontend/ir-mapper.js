@@ -59,9 +59,27 @@
   }
 
   // node_modules/@ha-plus/ui/src/native.js
+  function actionButton(label, handler, disabled = false, appearance = "plain") {
+    const modern = Boolean(customElements.get("ha-button"));
+    const node = el(modern ? "ha-button" : "mwc-button", label);
+    node.type = "button";
+    node.disabled = disabled;
+    if (modern) {
+      node.appearance = appearance === "danger" ? "plain" : appearance;
+      node.variant = appearance === "danger" ? "danger" : "brand";
+    } else {
+      node.raised = appearance === "accent";
+      if (appearance === "danger") node.classList.add("destructive");
+    }
+    node.addEventListener("click", () => {
+      if (!node.disabled) handler();
+    });
+    return node;
+  }
   function iconButton(label, name, handler, disabled = false) {
     const node = el("ha-icon-button");
     node.label = label;
+    node.setAttribute("aria-label", label);
     node.disabled = disabled;
     node.append(icon(name));
     node.addEventListener("click", () => {
@@ -109,7 +127,33 @@
   }
 
   // node_modules/@ha-plus/ui/src/styles.js
-  var themeStyles = `
+  var panelHeaderStyles = `
+  .ha-plus-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: var(--header-height, 56px);
+    min-height: var(--header-height, 56px);
+    padding: 0 12px;
+    box-sizing: border-box;
+    font-family: var(--ha-font-family-body, var(--primary-font-family, Roboto, sans-serif));
+    border-bottom: 1px solid var(--divider-color, #e0e0e0);
+    background: var(--app-header-background-color, var(--primary-background-color, #fafafa));
+    color: var(--app-header-text-color, var(--primary-text-color, #212121));
+  }
+  .ha-plus-header-heading { flex: 1; min-width: 0; }
+  .ha-plus-header h1 { margin: 0; font-size: 20px; font-weight: 400; line-height: 24px; overflow-wrap: anywhere; }
+  .ha-plus-header-icon { width: 32px; height: 32px; object-fit: contain; flex-shrink: 0; }
+  .ha-plus-header :is(ha-menu-button, ha-icon-button) { flex-shrink: 0; }
+  @media (max-width: 480px) {
+    .ha-plus-header { gap: 4px; padding-inline: 4px; }
+    .ha-plus-header h1 { font-size: 18px; line-height: 22px; }
+  }
+`;
+  var themeStyles = `${panelHeaderStyles}
   :host { display:block; color:var(--primary-text-color,#212121); font-family:var(--primary-font-family,var(--paper-font-body1_-_font-family,Roboto,sans-serif)); }
   *, *::before, *::after { box-sizing:border-box; }
   [hidden] { display:none !important; }
@@ -133,8 +177,6 @@
   .listbox { position:absolute; z-index:10; inset-inline:0; top:100%; margin-top:4px; max-height:300px; overflow:auto; padding:6px; background:var(--card-background-color,#fff); border:1px solid var(--divider-color,#e0e0e0); border-radius:14px; box-shadow:var(--ha-card-box-shadow,0 4px 16px #0003); }
   .option { display:block; width:100%; text-align:start; border-radius:10px; background:transparent; color:var(--primary-text-color,#212121); white-space:normal; overflow-wrap:anywhere; }
   .option[aria-selected=true] { color:var(--primary-color,#03a9f4); background:var(--secondary-background-color,#f5f5f5); }
-  .ha-plus-header { display:flex; align-items:center; gap:12px; padding:4px 16px; min-height:var(--header-height,56px); background:var(--app-header-background-color,var(--primary-background-color,#fafafa)); color:var(--app-header-text-color,var(--primary-text-color,#212121)); }
-  .ha-plus-header h1 { font-size:20px; font-weight:400; flex:1; margin:0; }
   .ha-plus-content { max-width:1000px; margin:auto; padding:24px; }
   .notice { padding:12px 16px; margin-bottom:16px; background:var(--secondary-background-color,#f5f5f5); border-radius:14px; overflow-wrap:anywhere; }
   .error { color:var(--error-color,#db4437); white-space:pre-wrap; }
@@ -153,7 +195,6 @@
   .ha-plus-dialog-actions { display: flex; flex-wrap: wrap; justify-content: end; gap: 8px; }
   ha-alert.notice { padding: 0; background: transparent; }
   ha-form.field { min-width: 0; }
-  .ha-plus-header { min-height: var(--header-height, 56px); border-bottom: 1px solid var(--divider-color, #e0e0e0); }
   ha-dialog { --mdc-dialog-min-width: min(420px, calc(100vw - 32px)); --mdc-dialog-max-width: 560px; }
 `;
   var appStyles = `${themeStyles}${nativeStyles}
@@ -253,13 +294,6 @@
     gap: 12px;
   }
 
-  .ha-plus-group {
-    border-inline-start: 4px solid var(--divider-color, #e0e0e0);
-  }
-
-  .ha-plus-group.active {
-    border-inline-start-color: var(--primary-color, #03a9f4);
-  }
 
   .ha-plus-value {
     margin: 12px 0 4px;
@@ -546,6 +580,187 @@
   }
 `;
 
+  // node_modules/@ha-plus/ui/src/preferences.js
+  function haContext() {
+    if (typeof window === "undefined") return void 0;
+    try {
+      return window.parent?.document.querySelector("home-assistant")?.hass || window.document.querySelector("home-assistant")?.hass;
+    } catch {
+      return void 0;
+    }
+  }
+  function preferences(hass = haContext()) {
+    const locale = hass?.locale || {};
+    const language = locale.language || hass?.language || "en";
+    const numberLocales = { comma_decimal: "en-US", decimal_comma: "de-DE", space_comma: "sv-SE" };
+    const numberLanguage = numberLocales[locale.number_format] || (locale.number_format === "system" && typeof navigator !== "undefined" ? navigator.language : language);
+    const direction = hass?.translationMetadata?.translations?.[language]?.isRTL || /^(ar|fa|he|ur)(-|$)/i.test(language) ? "rtl" : "ltr";
+    const dateLocales = { DMY: "en-GB", MDY: "en-US", YMD: "sv-SE" };
+    const dateLanguage = dateLocales[locale.date_format] || (locale.date_format === "system" && typeof navigator !== "undefined" ? navigator.language : language);
+    const timeLanguage = locale.time_format === "system" && typeof navigator !== "undefined" ? navigator.language : language;
+    const languageHour12 = new Intl.DateTimeFormat(timeLanguage, { hour: "numeric" }).resolvedOptions().hour12;
+    return {
+      dateLanguage,
+      language,
+      direction,
+      numberLanguage,
+      useGrouping: locale.number_format !== "none",
+      timeZone: locale.time_zone === "local" ? Intl.DateTimeFormat().resolvedOptions().timeZone : hass?.config?.time_zone,
+      hour12: ["12", "am_pm"].includes(locale.time_format) ? true : ["24", "twenty_four"].includes(locale.time_format) ? false : languageHour12,
+      unitSystem: { ...hass?.config?.unit_system }
+    };
+  }
+  function applyPreferences(host, hass) {
+    const value = preferences(hass);
+    if (host.getAttribute("dir") !== value.direction) host.setAttribute("dir", value.direction);
+    if (host.getAttribute("lang") !== value.language) host.setAttribute("lang", value.language);
+    return value;
+  }
+  function formatNumber(hass, value, options = {}) {
+    const settings = preferences(hass);
+    return new Intl.NumberFormat(settings.numberLanguage, { useGrouping: settings.useGrouping, ...options }).format(value);
+  }
+
+  // node_modules/@ha-plus/ui/src/translations/en.json
+  var en_default2 = {
+    save: "Save",
+    cancel: "Cancel",
+    close: "Close",
+    delete: "Delete",
+    edit: "Edit",
+    add: "Add",
+    refresh: "Refresh",
+    loading: "Loading\u2026",
+    retry: "Retry",
+    settings: "Settings",
+    yes: "Yes",
+    no: "No",
+    apply: "Apply",
+    confirm: "Confirm",
+    more_actions: "More actions",
+    dashboard_load_failed: "Home Assistant's dashboard controls could not load. Reload and try again.",
+    controls_load_failed: "Home Assistant's to-do controls could not load. Reload and try again.",
+    component_load_failed: "Home Assistant could not load {component}. Reload and try again."
+  };
+
+  // node_modules/@ha-plus/ui/src/localize.js
+  var nativeKeys = {
+    save: "ui.common.save",
+    cancel: "ui.common.cancel",
+    close: "ui.common.close",
+    delete: "ui.common.delete",
+    edit: "ui.common.edit",
+    add: "ui.common.add",
+    refresh: "ui.common.refresh",
+    loading: "ui.common.loading",
+    retry: "ui.common.retry",
+    yes: "ui.common.yes",
+    no: "ui.common.no",
+    apply: "ui.common.apply"
+  };
+  function localize(hass, messages, key, values = {}) {
+    const shortKey = key.replace(/^common\./, "");
+    const nativeKey = nativeKeys[shortKey];
+    const native = nativeKey && hass?.localize?.(nativeKey);
+    const message = native && native !== nativeKey ? native : messages[key] || en_default2[shortKey] || key;
+    return String(message).replace(/\{([\w]+)\}/g, (match, name) => {
+      if (!Object.hasOwn(values, name)) return match;
+      return typeof values[name] === "number" ? formatNumber(hass, values[name]) : String(values[name]);
+    });
+  }
+
+  // node_modules/@ha-plus/ui/src/ha-actions.js
+  function showMoreInfo(host, entityId) {
+    if (!/^[a-z_]+\.[a-z0-9_]+$/.test(entityId || "")) return false;
+    const root = host || (() => {
+      try {
+        return window.parent.document.querySelector("home-assistant");
+      } catch {
+        return void 0;
+      }
+    })();
+    if (!root) return false;
+    const Event = root.ownerDocument.defaultView.CustomEvent;
+    root.dispatchEvent(new Event("hass-more-info", { bubbles: true, composed: true, detail: { entityId } }));
+    return true;
+  }
+  function integrationUrl(domain, add = false) {
+    if (!/^[a-z0-9_]+$/.test(domain)) throw new TypeError("Invalid integration domain");
+    return add ? `/config/integrations/dashboard/add?domain=${domain}` : `/config/integrations/integration/${domain}`;
+  }
+  function showToast(host, message) {
+    if (!host) {
+      try {
+        host = window.parent.document.querySelector("home-assistant");
+      } catch {
+        return false;
+      }
+    }
+    if (!host) return false;
+    const Event = host.ownerDocument.defaultView.CustomEvent;
+    host.dispatchEvent(new Event("hass-notification", { bubbles: true, composed: true, detail: { message } }));
+    return true;
+  }
+  function overflowMenu(actions, label = localize(haContext(), {}, "more_actions")) {
+    const registry = document.defaultView?.customElements;
+    if (registry?.get("ha-dropdown")) {
+      const menu2 = el("ha-dropdown");
+      const trigger2 = iconButton(label, "mdi:dots-vertical", () => {
+      });
+      trigger2.slot = "trigger";
+      menu2.append(trigger2);
+      actions.forEach((action, index) => {
+        const item = el("ha-dropdown-item", action.label);
+        item.value = String(index);
+        item.disabled = Boolean(action.disabled);
+        menu2.append(item);
+      });
+      menu2.addEventListener("wa-select", (event) => {
+        const action = actions[Number(event.detail?.item?.value)];
+        if (action && !action.disabled) action.run();
+      });
+      return menu2;
+    }
+    if (registry?.get("ha-button-menu")) {
+      const menu2 = el("ha-button-menu");
+      const trigger2 = iconButton(label, "mdi:dots-vertical", () => {
+      });
+      trigger2.slot = "trigger";
+      menu2.append(trigger2);
+      for (const action of actions) {
+        const item = el("mwc-list-item", action.label);
+        item.disabled = Boolean(action.disabled);
+        item.addEventListener("click", () => {
+          if (!item.disabled) action.run();
+        });
+        menu2.append(item);
+      }
+      return menu2;
+    }
+    const menu = el("details", void 0, "ha-plus-overflow");
+    const trigger = el("summary", label);
+    menu.append(trigger);
+    for (const action of actions) {
+      const item = el("button", action.label);
+      item.type = "button";
+      item.disabled = Boolean(action.disabled);
+      item.addEventListener("click", () => {
+        if (!item.disabled) {
+          menu.open = false;
+          action.run();
+        }
+      });
+      menu.append(item);
+    }
+    return menu;
+  }
+  function navigate(host, path) {
+    if (!path.startsWith("/") || path.startsWith("//")) throw new TypeError("Navigation must stay within Home Assistant");
+    const view = host?.ownerDocument.defaultView || window.parent;
+    view.history.pushState(null, "", path);
+    view.dispatchEvent(new view.CustomEvent("location-changed", { detail: { replace: false } }));
+  }
+
   // node_modules/@ha-plus/ui/src/controls.js
   var controlStyles = `${appStyles}
 
@@ -713,26 +928,6 @@
     }
   }
 
-  header {
-    padding: 16px;
-    border-bottom: 1px solid var(--divider-color);
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    background: var(--app-header-background-color);
-    color: var(--app-header-text-color);
-  }
-
-  h1 {
-    font-size: 20px;
-    font-weight: 400;
-    margin: 0;
-  }
-
-  header .heading {
-    flex: 1;
-  }
-
   main {
     max-width: 1000px;
     margin: auto;
@@ -788,95 +983,6 @@
       );
     }
     button2.style.backgroundColor = `rgb(${rgb.join(",")})`;
-  }
-
-  // node_modules/@ha-plus/ui/src/preferences.js
-  function haContext() {
-    if (typeof window === "undefined") return void 0;
-    try {
-      return window.parent?.document.querySelector("home-assistant")?.hass || window.document.querySelector("home-assistant")?.hass;
-    } catch {
-      return void 0;
-    }
-  }
-  function preferences(hass = haContext()) {
-    const locale = hass?.locale || {};
-    const language = locale.language || hass?.language || "en";
-    const numberLocales = { comma_decimal: "en-US", decimal_comma: "de-DE", space_comma: "sv-SE" };
-    const numberLanguage = numberLocales[locale.number_format] || (locale.number_format === "system" && typeof navigator !== "undefined" ? navigator.language : language);
-    const direction = hass?.translationMetadata?.translations?.[language]?.isRTL || /^(ar|fa|he|ur)(-|$)/i.test(language) ? "rtl" : "ltr";
-    const dateLocales = { DMY: "en-GB", MDY: "en-US", YMD: "sv-SE" };
-    const dateLanguage = dateLocales[locale.date_format] || (locale.date_format === "system" && typeof navigator !== "undefined" ? navigator.language : language);
-    const timeLanguage = locale.time_format === "system" && typeof navigator !== "undefined" ? navigator.language : language;
-    const languageHour12 = new Intl.DateTimeFormat(timeLanguage, { hour: "numeric" }).resolvedOptions().hour12;
-    return {
-      dateLanguage,
-      language,
-      direction,
-      numberLanguage,
-      useGrouping: locale.number_format !== "none",
-      timeZone: locale.time_zone === "local" ? Intl.DateTimeFormat().resolvedOptions().timeZone : hass?.config?.time_zone,
-      hour12: ["12", "am_pm"].includes(locale.time_format) ? true : ["24", "twenty_four"].includes(locale.time_format) ? false : languageHour12,
-      unitSystem: { ...hass?.config?.unit_system }
-    };
-  }
-  function applyPreferences(host, hass) {
-    const value = preferences(hass);
-    if (host.getAttribute("dir") !== value.direction) host.setAttribute("dir", value.direction);
-    if (host.getAttribute("lang") !== value.language) host.setAttribute("lang", value.language);
-    return value;
-  }
-  function formatNumber(hass, value, options = {}) {
-    const settings = preferences(hass);
-    return new Intl.NumberFormat(settings.numberLanguage, { useGrouping: settings.useGrouping, ...options }).format(value);
-  }
-
-  // node_modules/@ha-plus/ui/src/translations/en.json
-  var en_default2 = {
-    save: "Save",
-    cancel: "Cancel",
-    close: "Close",
-    delete: "Delete",
-    edit: "Edit",
-    add: "Add",
-    refresh: "Refresh",
-    loading: "Loading\u2026",
-    retry: "Retry",
-    settings: "Settings",
-    yes: "Yes",
-    no: "No",
-    apply: "Apply",
-    confirm: "Confirm",
-    more_actions: "More actions",
-    dashboard_load_failed: "Home Assistant's dashboard controls could not load. Reload and try again.",
-    controls_load_failed: "Home Assistant's to-do controls could not load. Reload and try again.",
-    component_load_failed: "Home Assistant could not load {component}. Reload and try again."
-  };
-
-  // node_modules/@ha-plus/ui/src/localize.js
-  var nativeKeys = {
-    save: "ui.common.save",
-    cancel: "ui.common.cancel",
-    close: "ui.common.close",
-    delete: "ui.common.delete",
-    edit: "ui.common.edit",
-    add: "ui.common.add",
-    refresh: "ui.common.refresh",
-    loading: "ui.common.loading",
-    retry: "ui.common.retry",
-    yes: "ui.common.yes",
-    no: "ui.common.no",
-    apply: "ui.common.apply"
-  };
-  function localize(hass, messages, key, values = {}) {
-    const shortKey = key.replace(/^common\./, "");
-    const nativeKey = nativeKeys[shortKey];
-    const native = nativeKey && hass?.localize?.(nativeKey);
-    const message = native && native !== nativeKey ? native : messages[key] || en_default2[shortKey] || key;
-    return String(message).replace(/\{([\w]+)\}/g, (match, name) => {
-      if (!Object.hasOwn(values, name)) return match;
-      return typeof values[name] === "number" ? formatNumber(hass, values[name]) : String(values[name]);
-    });
   }
 
   // node_modules/@ha-plus/ui/src/loader.js
@@ -949,101 +1055,9 @@
     }
   }
 
-  // node_modules/@ha-plus/ui/src/ha-actions.js
-  function showMoreInfo(host, entityId) {
-    if (!/^[a-z_]+\.[a-z0-9_]+$/.test(entityId || "")) return false;
-    const root = host || (() => {
-      try {
-        return window.parent.document.querySelector("home-assistant");
-      } catch {
-        return void 0;
-      }
-    })();
-    if (!root) return false;
-    const Event = root.ownerDocument.defaultView.CustomEvent;
-    root.dispatchEvent(new Event("hass-more-info", { bubbles: true, composed: true, detail: { entityId } }));
-    return true;
-  }
-  function integrationUrl(domain, add = false) {
-    if (!/^[a-z0-9_]+$/.test(domain)) throw new TypeError("Invalid integration domain");
-    return add ? `/config/integrations/dashboard/add?domain=${domain}` : `/config/integrations/integration/${domain}`;
-  }
-  function showToast(host, message) {
-    if (!host) {
-      try {
-        host = window.parent.document.querySelector("home-assistant");
-      } catch {
-        return false;
-      }
-    }
-    if (!host) return false;
-    const Event = host.ownerDocument.defaultView.CustomEvent;
-    host.dispatchEvent(new Event("hass-notification", { bubbles: true, composed: true, detail: { message } }));
-    return true;
-  }
-  function overflowMenu(actions, label = localize(haContext(), {}, "more_actions")) {
-    const registry = document.defaultView?.customElements;
-    if (registry?.get("ha-dropdown")) {
-      const menu2 = el("ha-dropdown");
-      const trigger2 = iconButton(label, "mdi:dots-vertical", () => {
-      });
-      trigger2.slot = "trigger";
-      menu2.append(trigger2);
-      actions.forEach((action, index) => {
-        const item = el("ha-dropdown-item", action.label);
-        item.value = String(index);
-        item.disabled = Boolean(action.disabled);
-        menu2.append(item);
-      });
-      menu2.addEventListener("wa-select", (event) => {
-        const action = actions[Number(event.detail?.item?.value)];
-        if (action && !action.disabled) action.run();
-      });
-      return menu2;
-    }
-    if (registry?.get("ha-button-menu")) {
-      const menu2 = el("ha-button-menu");
-      const trigger2 = iconButton(label, "mdi:dots-vertical", () => {
-      });
-      trigger2.slot = "trigger";
-      menu2.append(trigger2);
-      for (const action of actions) {
-        const item = el("mwc-list-item", action.label);
-        item.disabled = Boolean(action.disabled);
-        item.addEventListener("click", () => {
-          if (!item.disabled) action.run();
-        });
-        menu2.append(item);
-      }
-      return menu2;
-    }
-    const menu = el("details", void 0, "ha-plus-overflow");
-    const trigger = el("summary", label);
-    menu.append(trigger);
-    for (const action of actions) {
-      const item = el("button", action.label);
-      item.type = "button";
-      item.disabled = Boolean(action.disabled);
-      item.addEventListener("click", () => {
-        if (!item.disabled) {
-          menu.open = false;
-          action.run();
-        }
-      });
-      menu.append(item);
-    }
-    return menu;
-  }
-  function navigate(host, path) {
-    if (!path.startsWith("/") || path.startsWith("//")) throw new TypeError("Navigation must stay within Home Assistant");
-    const view = host?.ownerDocument.defaultView || window.parent;
-    view.history.pushState(null, "", path);
-    view.dispatchEvent(new view.CustomEvent("location-changed", { detail: { replace: false } }));
-  }
-
   // node_modules/@ha-plus/ui/src/index.js
-  /*! @ha-plus/ui v0.4.0-rc.4 | MIT | Copyright (c) 2026 HA+ contributors | https://github.com/zvikarp/ha-plus-packages/blob/main/LICENSE */
-  function panelHeader(title, { hass, narrow, actions = [], subtitle } = {}) {
+  /*! @ha-plus/ui v0.3.2 | MIT | Copyright (c) 2026 HA+ contributors | https://github.com/zvikarp/ha-plus-packages/blob/main/LICENSE */
+  function panelHeader(title, { hass, narrow, actions = [], subtitle, domain, iconUrl, onRefresh, refreshing = false } = {}) {
     const header = el("header", void 0, "ha-plus-header");
     const menu = el("ha-menu-button");
     menu.hass = hass;
@@ -1051,7 +1065,21 @@
     const heading = el("div", void 0, "ha-plus-header-heading");
     heading.append(el("h1", title));
     if (subtitle) heading.append(el("p", subtitle, "ha-plus-muted"));
-    header.append(menu, heading, ...actions);
+    header.append(menu);
+    if (iconUrl) {
+      const logo = el("img", void 0, "ha-plus-header-icon");
+      logo.src = iconUrl;
+      logo.alt = "";
+      header.append(logo);
+    }
+    header.append(heading);
+    if (onRefresh) header.append(iconButton(localize(hass, {}, "common.refresh"), "mdi:refresh", onRefresh, refreshing));
+    header.append(...actions);
+    if (domain && hass?.user?.is_admin) {
+      const settings = iconButton(localize(hass, {}, "settings"), "mdi:cog", () => navigate(header, integrationUrl(domain)));
+      settings.dataset.settings = "";
+      header.append(settings);
+    }
     return header;
   }
   function notice(message, kind = "status") {
@@ -1362,12 +1390,19 @@
     }
     build() {
       this.shadowRoot.append(el("style", controlStyles));
-      const add = el("a", this._t("add_device"), "primary action-link");
-      add.href = integrationUrl("broadlink_ir_mapper", true);
+      const add = actionButton(this._t("add_device"), () => navigate(this, integrationUrl("broadlink_ir_mapper", true)), false, "accent");
       this._add = add;
-      const header = panelHeader("HA+ IR", { hass: this._hass, narrow: this._narrow, actions: [add] });
+      const header = panelHeader("HA+ IR Mapper", {
+        hass: this._hass,
+        narrow: this._narrow,
+        domain: "broadlink_ir_mapper",
+        iconUrl: "/broadlink_ir_mapper/icon.png",
+        onRefresh: () => {
+          this._ids = void 0;
+          this.hass = this._hass;
+        }
+      });
       this._count = el("p", "", "ha-plus-muted");
-      header.querySelector(".ha-plus-header-heading").append(this._count);
       const main = el("main");
       main.append(
         el("p", this._t("your_remotes_made_simple"), "eyebrow"),
@@ -1386,7 +1421,7 @@
         )
       );
       this._grid = el("div", void 0, "grid");
-      main.append(this._empty, this._grid);
+      main.append(this._count, add, this._empty, this._grid);
       this.shadowRoot.append(header, main);
     }
   };
