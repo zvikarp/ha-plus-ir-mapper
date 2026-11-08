@@ -2,7 +2,7 @@ import messages from "./translations/en.json";
 import { localize, haContext } from "@ha-plus/ui";
 const t = (key, values) => localize(haContext(), messages, key, values);
 
-import { controlStyles, el as node, colorSwatch, button, icon, notice, panelHeader, iconButton, overflowMenu, integrationUrl, navigate, showMoreInfo, showToast, applyPreferences, formatNumber, loadNativeSlider, nativeSlider } from "@ha-plus/ui";
+import { appFooter, controlStyles, el as node, colorSwatch, button, icon, notice, panelHeader, iconButton, overflowMenu, integrationUrl, navigate, showMoreInfo, showToast, applyPreferences, formatNumber, loadNativeSlider, nativeSlider } from "@ha-plus/ui";
 
 /* HA+ IR: one theme-aware control surface shared by the panel and dashboard. */
 const manageUrl = "/config/integrations/integration/broadlink_ir_mapper";
@@ -273,6 +273,11 @@ class IRCard extends HTMLElement {
 class IRPanel extends HTMLElement {
   _t(key, values) { return localize(this._hass, messages, key, values); }
 
+  set panel(value) {
+    this._panel = value;
+    const version = this.shadowRoot.querySelector("[data-version]");
+    if (version) version.textContent = value?.config?.version ? `v${value.config.version}` : "";
+  }
   set narrow(value) {
     this._narrow = value;
     const menu = this.shadowRoot?.querySelector("ha-menu-button");
@@ -338,7 +343,13 @@ class IRPanel extends HTMLElement {
 		);
 		this._grid = node("div", undefined, "grid");
 		main.append(this._count, add, this._empty, this._grid);
-		this.shadowRoot.append(header, main);
+		const body = node("div", undefined, "ha-plus-page-body");
+        body.append(main, appFooter({
+          githubUrl: "https://github.com/zvikarp/ha-plus-ir-mapper",
+          documentationUrl: "https://github.com/zvikarp/ha-plus-ir-mapper#readme",
+          version: this._panel?.config?.version,
+        }));
+        this.shadowRoot.append(header, body);
 	}
 }
 class IREditor extends HTMLElement {

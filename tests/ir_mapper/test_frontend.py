@@ -29,3 +29,4 @@ async def test_frontend_registration_is_serialized():
         assert panel.await_count == 1
         assert add.call_args.args[1].endswith("ir-mapper.js?v=1.0.0")
         assert panel.call_args.kwargs["require_admin"] is False
+        assert panel.call_args.kwargs["config"] == {"version": "1.0.0"}

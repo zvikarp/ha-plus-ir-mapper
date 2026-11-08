@@ -1038,8 +1038,45 @@
     }
   }
 
+  // node_modules/@ha-plus/ui/src/footer.js
+  var footerStyles = `
+  .ha-plus-footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    margin-top: auto;
+    padding: 24px 16px;
+    border-top: 1px solid var(--divider-color, #e0e0e0);
+    color: var(--secondary-text-color, #727272);
+    font: 14px var(--ha-font-family-body, var(--primary-font-family, Roboto, sans-serif));
+  }
+  .ha-plus-footer a { color: var(--primary-color, #03a9f4); text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
+  .ha-plus-footer a:hover { text-decoration: underline; }
+  .ha-plus-footer a:focus-visible { outline: 2px solid var(--primary-color, #03a9f4); outline-offset: 4px; }
+  .ha-plus-page-body { display: flex; flex-direction: column; min-height: calc(100dvh - var(--header-height, 56px)); }
+  .ha-plus-page-body > main { flex: 1; width: 100%; box-sizing: border-box; }
+`;
+  function appFooter({ githubUrl, documentationUrl, version } = {}) {
+    const footer = el("footer", void 0, "ha-plus-footer");
+    footer.append(el("style", footerStyles));
+    for (const [label, href] of [["GitHub", githubUrl], ["Documentation", documentationUrl]]) {
+      if (!href) continue;
+      const link = el("a", label);
+      link.href = href;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      footer.append(link);
+    }
+    const number = el("span", version ? `v${String(version).replace(/^v/, "")}` : "");
+    number.dataset.version = "";
+    footer.append(number);
+    return footer;
+  }
+
   // node_modules/@ha-plus/ui/src/index.js
-  /*! @ha-plus/ui v0.3.2 | MIT | Copyright (c) 2026 HA+ contributors | https://github.com/zvikarp/ha-plus-packages/blob/main/LICENSE */
+  /*! @ha-plus/ui v0.3.3 | MIT | Copyright (c) 2026 HA+ contributors | https://github.com/zvikarp/ha-plus-packages/blob/main/LICENSE */
   function panelHeader(title, { hass, narrow, actions = [], subtitle, domain, iconUrl, onRefresh, refreshing = false } = {}) {
     const header = el("header", void 0, "ha-plus-header");
     const menu = el("ha-menu-button");
@@ -1338,6 +1375,11 @@
     _t(key, values) {
       return localize(this._hass, en_default, key, values);
     }
+    set panel(value) {
+      this._panel = value;
+      const version = this.shadowRoot.querySelector("[data-version]");
+      if (version) version.textContent = value?.config?.version ? `v${value.config.version}` : "";
+    }
     set narrow(value) {
       this._narrow = value;
       const menu = this.shadowRoot?.querySelector("ha-menu-button");
@@ -1405,7 +1447,13 @@
       );
       this._grid = el("div", void 0, "grid");
       main.append(this._count, add, this._empty, this._grid);
-      this.shadowRoot.append(header, main);
+      const body = el("div", void 0, "ha-plus-page-body");
+      body.append(main, appFooter({
+        githubUrl: "https://github.com/zvikarp/ha-plus-ir-mapper",
+        documentationUrl: "https://github.com/zvikarp/ha-plus-ir-mapper#readme",
+        version: this._panel?.config?.version
+      }));
+      this.shadowRoot.append(header, body);
     }
   };
   var IREditor = class extends HTMLElement {

@@ -148,7 +148,7 @@ test('panel and card share control styles and color presets use the package help
   panel.hass = hass;
   for (const view of [card, panel]) {
     assert.equal(view.shadowRoot.querySelector('style').textContent, controlStyles);
-    assert.equal(view.shadowRoot.querySelectorAll('style').length, 1);
+    assert.equal([...view.shadowRoot.children].filter(node => node.localName === 'style').length, 1);
   }
   assert.equal(card.shadowRoot.querySelector('.swatch').style.backgroundColor, 'rgb(255,90,80)');
 });
