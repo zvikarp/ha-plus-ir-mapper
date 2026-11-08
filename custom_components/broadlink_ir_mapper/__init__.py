@@ -8,6 +8,9 @@ DOMAIN = "broadlink_ir_mapper"
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    from .editor import async_register_editor
+
+    async_register_editor(hass)
     return True
 
 

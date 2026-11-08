@@ -1,37 +1,4 @@
 (() => {
-  // src/translations/en.json
-  var en_default = {
-    command_failed_check_the_broadlink_remote_and_retry: "Command failed. Check the BroadLink remote and retry.",
-    choose_an_ir_light: "Choose an IR light",
-    select_a_ha_ir_entity_in_the_card_editor_or_add_your_first_device: "Select a HA+ IR entity in the card editor, or add your first device.",
-    set_up_an_ir_light: "Set up an IR light",
-    remote_unavailable: "Remote unavailable",
-    sending_command: "Sending command\u2026",
-    on_assumed_state: "On \xB7 Assumed state",
-    off_assumed_state: "Off \xB7 Assumed state",
-    turn_off: "Turn off",
-    turn_on: "Turn on",
-    entity_details: "Entity details",
-    integration_settings: "Integration settings",
-    brightness: "Brightness",
-    estimated: "{value1}% \xB7 Estimated",
-    release_to_send: "{value1}% \xB7 Release to send",
-    steps_ir_brightness_is_approximate: "{value1} steps \xB7 IR brightness is approximate",
-    colors: "Colors",
-    effects: "Effects",
-    "common.retry": "Retry",
-    resync_to_full_brightness: "Resync to full brightness",
-    device_settings: "Device settings \u2197",
-    local_control: "{value1} {value2} \xB7 Local control",
-    add_device: "Add device",
-    your_remotes_made_simple: "Your remotes, made simple",
-    power_colors_and_effects_without_reaching_for_the_remote_ir_devices_report_assumed_st: "Power, colors, and effects \u2014 without reaching for the remote. IR devices report assumed state.",
-    bring_your_ir_lights_into_ha: "Bring your IR lights into HA+",
-    add_a_device_choose_your_broadlink_remote_and_learn_its_buttons_no_yaml_or_copied_cod: "Add a device, choose your BroadLink remote, and learn its buttons. No YAML or copied codes needed.",
-    automatic_ir_presets_effects_brightness_and_resynchronization: "Automatic IR presets, effects, brightness, and resynchronization",
-    command_sent: "Command sent"
-  };
-
   // node_modules/@ha-plus/ui/src/dom.js
   function el(tag, text, className) {
     const node = document.createElement(tag);
@@ -68,6 +35,15 @@
     node.addEventListener("click", () => {
       if (!node.disabled) handler();
     });
+    return node;
+  }
+  function nativeTextField(label, value, change) {
+    const node = el(customElements.get("ha-input") ? "ha-input" : "ha-textfield");
+    node.label = label;
+    node.placeholder = label;
+    node.value = value;
+    node.setAttribute("aria-label", label);
+    node.addEventListener("input", () => change(node.value));
     return node;
   }
   function nativeForm(hass, schema, data, change) {
@@ -605,7 +581,7 @@
   }
 
   // node_modules/@ha-plus/ui/src/translations/en.json
-  var en_default2 = {
+  var en_default = {
     save: "Save",
     cancel: "Cancel",
     close: "Close",
@@ -645,7 +621,7 @@
     const shortKey = key.replace(/^common\./, "");
     const nativeKey = nativeKeys[shortKey];
     const native = nativeKey && hass?.localize?.(nativeKey);
-    const message = native && native !== nativeKey ? native : messages[key] || en_default2[shortKey] || key;
+    const message = native && native !== nativeKey ? native : messages[key] || en_default[shortKey] || key;
     return String(message).replace(/\{([\w]+)\}/g, (match, name) => {
       if (!Object.hasOwn(values, name)) return match;
       return typeof values[name] === "number" ? formatNumber(hass, values[name]) : String(values[name]);
@@ -742,6 +718,81 @@
     const view = host?.ownerDocument.defaultView || window.parent;
     view.history.pushState(null, "", path);
     view.dispatchEvent(new view.CustomEvent("location-changed", { detail: { replace: false } }));
+  }
+
+  // node_modules/@ha-plus/ui/src/collection-layout.js
+  var collectionLayoutStyles = `
+  .ha-plus-collection-layout {
+    --ha-plus-collection-header-height: var(--header-height, 56px);
+    display: grid;
+    grid-template-columns: 256px minmax(0, 1fr);
+    min-height: calc(100dvh - var(--ha-plus-collection-header-height));
+  }
+  .ha-plus-collection-layout.ha-plus-embedded { --ha-plus-collection-header-height: 0px; }
+  .ha-plus-collection-nav {
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: var(--ha-plus-collection-header-height);
+    height: calc(100dvh - var(--ha-plus-collection-header-height));
+    box-sizing: border-box;
+    padding: 12px 8px;
+    border-inline-end: 1px solid var(--divider-color, #e0e0e0);
+    background: var(--sidebar-background-color, var(--card-background-color, #fff));
+  }
+  .ha-plus-collection-items { flex: 1; overflow: auto; min-height: 0; }
+  .ha-plus-collection-nav h2 { margin: 20px 16px 8px; color: var(--secondary-text-color, #727272); font-size: 12px; font-weight: 500; }
+  .ha-plus-collection-item {
+    display: flex; align-items: center; gap: 16px; width: 100%; min-height: 56px;
+    box-sizing: border-box; padding: 8px 16px; border: 0; border-radius: 4px;
+    background: transparent; color: var(--primary-text-color, #212121); text-align: start;
+    font: inherit; text-decoration: none; cursor: pointer;
+  }
+  .ha-plus-collection-item:hover { background: var(--secondary-background-color, #f5f5f5); }
+  .ha-plus-collection-item[aria-current=page] { color: var(--primary-color, #03a9f4); background: var(--ha-color-fill-primary-quiet-resting, var(--secondary-background-color, #f5f5f5)); }
+  .ha-plus-collection-item:focus-visible { outline: 2px solid var(--primary-color, #03a9f4); outline-offset: -2px; }
+  .ha-plus-collection-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .ha-plus-collection-count { color: var(--secondary-text-color, #727272); font-size: 12px; }
+  .ha-plus-collection-create { padding: 16px 8px 4px; }
+  .ha-plus-create-button {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 40px; padding: 0 16px; border: 0; border-radius: var(--ha-button-border-radius, 999px);
+    background: var(--ha-color-fill-primary-normal-resting, #d9f2fc);
+    color: var(--ha-color-on-primary-quiet, var(--primary-color, #03a9f4));
+    text-decoration: none; font: 500 14px var(--ha-font-family-body, var(--primary-font-family, Roboto, sans-serif)); cursor: pointer;
+  }
+  ha-button.ha-plus-create-button, mwc-button.ha-plus-create-button { padding: 0; background: transparent; }
+  .ha-plus-collection-create .ha-plus-create-button { width: 100%; box-sizing: border-box; --ha-button-width: 100%; }
+  .ha-plus-create-button:hover { background: var(--ha-color-fill-primary-normal-hover, #caebf9); }
+  .ha-plus-create-button:focus-visible { outline: 2px solid var(--primary-color, #03a9f4); outline-offset: 3px; }
+  .ha-plus-create-button ha-icon { --mdc-icon-size: 20px; }
+  .ha-plus-collection-body { display: flex; flex-direction: column; min-width: 0; min-height: calc(100dvh - var(--ha-plus-collection-header-height)); }
+  .ha-plus-collection-content { flex: 1; min-width: 0; width: 100%; max-width: 1000px; margin-inline: auto; padding: 24px; box-sizing: border-box; }
+  .ha-plus-collection-mobile { display: none; padding: 16px; }
+  .ha-plus-collection-mobile label { display: block; margin-bottom: 8px; color: var(--secondary-text-color, #727272); }
+  .ha-plus-collection-mobile select { width: 100%; min-height: 48px; padding: 8px 12px; background: var(--card-background-color, #fff); color: var(--primary-text-color, #212121); border: 1px solid var(--divider-color, #e0e0e0); border-radius: 4px; font: inherit; }
+  .ha-plus-collection-mobile .ha-plus-create-button { margin-top: 12px; }
+  .ha-plus-collection-host { container-type: inline-size; }
+  @media (max-width: 750px) {
+    .ha-plus-collection-layout { display: block; }
+    .ha-plus-collection-nav { display: none; }
+    .ha-plus-collection-mobile { display: block; }
+    .ha-plus-collection-content { padding: 0 16px 24px; }
+  }
+  @container (max-width: 750px) {
+    .ha-plus-collection-layout { display: block; }
+    .ha-plus-collection-nav { display: none; }
+    .ha-plus-collection-mobile { display: block; }
+    .ha-plus-collection-content { padding: 0 16px 24px; }
+  }
+`;
+  function collectionCreateButton(label, handler, disabled = false) {
+    const control = button(void 0, handler, disabled, "ha-plus-create-button");
+    if (control.localName === "ha-button") control.appearance = "filled";
+    const plus = icon("mdi:plus");
+    if (control.localName !== "button") plus.slot = control.localName === "mwc-button" ? "icon" : "start";
+    control.append(plus, document.createTextNode(label));
+    return control;
   }
 
   // node_modules/@ha-plus/ui/src/controls.js
@@ -967,6 +1018,22 @@
     }
     button2.style.backgroundColor = `rgb(${rgb.join(",")})`;
   }
+  var remoteEditorStyles = `${appStyles}
+  :host { display: block; min-width: 0; }
+  .remote-editor { display: flex; flex-direction: column; gap: 20px; }
+  .remote-editor ha-form { display: block; }
+  .remote-command-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .remote-command { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 88px; width: 100%; padding: 12px 8px; border: 1px solid var(--divider-color); border-radius: 8px; background: var(--card-background-color); color: var(--primary-text-color); font: inherit; cursor: pointer; overflow-wrap: anywhere; }
+  .remote-command:focus-visible, .remote-command[aria-pressed=true] { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+  .remote-command small { color: var(--secondary-text-color); }
+  .remote-command[data-required=true] small { font-weight: 600; }
+  .remote-command[data-learned=true] { border-color: var(--success-color, #43a047); }
+  .remote-command:disabled { opacity: .6; cursor: default; }
+  .remote-command-color { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--divider-color); }
+  .remote-editor-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+  .remote-command-details { border-block: 1px solid var(--divider-color); padding-block: 16px; display: flex; flex-direction: column; gap: 16px; }
+  @media (max-width: 450px) { .remote-command-grid { gap: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+`;
 
   // node_modules/@ha-plus/ui/src/loader.js
   var nativeComponents;
@@ -982,7 +1049,7 @@
           }
           const dashboard = Object.values(resolver?.routerOptions?.routes || {}).find((route) => route.tag === "ha-panel-lovelace");
           if (!dashboard?.load) {
-            throw new Error(localize(host._hass, en_default2, "dashboard_load_failed"));
+            throw new Error(localize(host._hass, en_default, "dashboard_load_failed"));
           }
           await dashboard.load();
         }
@@ -995,7 +1062,7 @@
           await Promise.race([
             customElements.whenDefined("hui-todo-list-card"),
             new Promise((_, reject) => {
-              loadingTimeout = setTimeout(() => reject(new Error(localize(host._hass, en_default2, "controls_load_failed"))), 15e3);
+              loadingTimeout = setTimeout(() => reject(new Error(localize(host._hass, en_default, "controls_load_failed"))), 15e3);
             })
           ]);
         } finally {
@@ -1003,7 +1070,7 @@
         }
         for (const name of required) {
           if (!customElements.get(name)) {
-            throw new Error(localize(host._hass, en_default2, "component_load_failed", { component: name }));
+            throw new Error(localize(host._hass, en_default, "component_load_failed", { component: name }));
           }
         }
       })().catch((error) => {
@@ -1029,7 +1096,7 @@
       await Promise.race([
         customElements.whenDefined("ha-slider"),
         new Promise((_, reject) => {
-          timeout = setTimeout(() => reject(new Error(localize(host._hass, en_default2, "component_load_failed", { component: "ha-slider" }))), 15e3);
+          timeout = setTimeout(() => reject(new Error(localize(host._hass, en_default, "component_load_failed", { component: "ha-slider" }))), 15e3);
         })
       ]);
     } finally {
@@ -1047,12 +1114,12 @@
     flex-wrap: wrap;
     gap: 8px 24px;
     margin-top: auto;
-    padding: 24px 16px;
+    padding: 4px 16px;
     border-top: 1px solid var(--divider-color, #e0e0e0);
     color: var(--secondary-text-color, #727272);
     font: 14px var(--ha-font-family-body, var(--primary-font-family, Roboto, sans-serif));
   }
-  .ha-plus-footer a { color: var(--primary-color, #03a9f4); text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
+  .ha-plus-footer a { color: var(--primary-color, #03a9f4); text-decoration: none; min-height: 32px; display: inline-flex; align-items: center; }
   .ha-plus-footer a:hover { text-decoration: underline; }
   .ha-plus-footer a:focus-visible { outline: 2px solid var(--primary-color, #03a9f4); outline-offset: 4px; }
   .ha-plus-page-body { display: flex; flex-direction: column; min-height: calc(100dvh - var(--header-height, 56px)); }
@@ -1073,6 +1140,68 @@
     number.dataset.version = "";
     footer.append(number);
     return footer;
+  }
+
+  // node_modules/@ha-plus/ui/src/tabs.js
+  var nextTabsId = 0;
+  var tabStyles = `
+  .ha-plus-tabs { display: flex; gap: 0; min-height: 48px; border-bottom: 1px solid var(--divider-color, #e0e0e0); }
+  .ha-plus-tabs [role=tab] {
+    flex: 0 0 auto; min-width: 96px; min-height: 48px; padding: 0 24px; border: 0; border-bottom: 3px solid transparent;
+    border-radius: 0; background: transparent; color: var(--secondary-text-color, #727272);
+    font: 500 14px var(--ha-font-family-body, var(--primary-font-family, Roboto, sans-serif)); cursor: pointer;
+  }
+  .ha-plus-tabs [role=tab][aria-selected=true] { color: var(--primary-color, #03a9f4); border-bottom-color: var(--primary-color, #03a9f4); }
+  .ha-plus-tabs [role=tab]:hover { background: var(--secondary-background-color, #f5f5f5); }
+  .ha-plus-tabs [role=tab]:focus-visible { outline: 2px solid var(--primary-color, #03a9f4); outline-offset: -4px; }
+`;
+  function tabs(items, value, change, label) {
+    const list = el("div", void 0, "ha-plus-tabs");
+    list.setAttribute("role", "tablist");
+    list.setAttribute("aria-label", label);
+    const id = `ha-plus-tabs-${++nextTabsId}`;
+    const controls = items.map((item) => {
+      const control = el("button", item.label);
+      control.type = "button";
+      control.id = `${id}-${item.value}`;
+      control.dataset.value = item.value;
+      control.setAttribute("role", "tab");
+      control.addEventListener("click", () => {
+        list.value = item.value;
+        change(item.value);
+      });
+      list.append(control);
+      return control;
+    });
+    Object.defineProperty(list, "value", {
+      get: () => value,
+      set: (next) => {
+        if (!items.some((item) => item.value === next)) return;
+        value = next;
+        controls.forEach((control) => {
+          const selected = control.dataset.value === next;
+          control.setAttribute("aria-selected", String(selected));
+          control.tabIndex = selected ? 0 : -1;
+        });
+      }
+    });
+    list.value = value;
+    list.addEventListener("keydown", (event) => {
+      const current = controls.indexOf(event.target);
+      if (current < 0 || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const rtl = list.ownerDocument.defaultView.getComputedStyle(list).direction === "rtl";
+      let index;
+      if (event.key === "Home") index = 0;
+      else if (event.key === "End") index = controls.length - 1;
+      else {
+        const forward = event.key === "ArrowRight" !== rtl;
+        index = (current + (forward ? 1 : -1) + controls.length) % controls.length;
+      }
+      controls[index].focus();
+      controls[index].click();
+    });
+    return list;
   }
 
   // node_modules/@ha-plus/ui/src/index.js
@@ -1115,14 +1244,379 @@
     return node;
   }
 
+  // src/device-editor.js
+  var defaultColors = [
+    ["Red", "#ff0000"],
+    ["Green", "#00ff00"],
+    ["Blue", "#0000ff"],
+    ["White", "#ffffff"],
+    ["Orange", "#ff8000"],
+    ["Lime", "#80ff00"],
+    ["Sky blue", "#0080ff"],
+    ["Warm white", "#ffddaa"],
+    ["Amber", "#ffbf00"],
+    ["Cyan", "#00ffff"],
+    ["Purple", "#8000ff"],
+    ["Cool white", "#ddeeff"],
+    ["Yellow", "#ffff00"],
+    ["Teal", "#008080"],
+    ["Pink", "#ff0080"],
+    ["Magenta", "#ff00ff"]
+  ];
+  var standardCommands = [
+    ["power_on", "Power on", "mdi:power"],
+    ["power_off", "Power off", "mdi:power-off"],
+    ["brightness_up", "Brightness up", "mdi:brightness-7"],
+    ["brightness_down", "Brightness down", "mdi:brightness-5"]
+  ];
+  var hexToRgb = (hex) => /^#[0-9a-f]{6}$/i.test(hex) ? hex.slice(1).match(/../g).map((value) => parseInt(value, 16)) : void 0;
+  var rgbToHex = (rgb) => "#" + rgb.map((value) => value.toString(16).padStart(2, "0")).join("");
+  var emptyDevice = () => ({ name: "", broadlink_remote: "", brightness_steps: 10, ir_codes: {}, colors: [], effects: [] });
+  var IRDeviceEditor = class extends HTMLElement {
+    constructor() {
+      super();
+      this.attachShadow({ mode: "open" });
+      this._tab = "settings";
+    }
+    async configure(hass, helpers, selected, close) {
+      this._hass = hass;
+      this._helpers = helpers;
+      this._entry = selected?.entry;
+      this._deviceId = selected?.device.unique_id;
+      this._data = selected ? structuredClone(selected.device) : emptyDevice();
+      this._requestId = crypto.randomUUID();
+      this._close = close;
+      this.render();
+      try {
+        await loadNativeComponents(this);
+        this._ready = true;
+      } catch (error) {
+        this._error = error.message;
+      }
+      this.render();
+    }
+    _call(action, data = {}) {
+      return this._hass.callWS({ type: `broadlink_ir_mapper/${action}`, ...data });
+    }
+    async _run(action) {
+      if (this._busy) return;
+      this._busy = true;
+      this._error = void 0;
+      this.render();
+      try {
+        await action();
+      } catch (error) {
+        this._error = error.message || "The operation failed. Please retry.";
+      } finally {
+        this._busy = false;
+        this.render();
+      }
+    }
+    _validSettings() {
+      if (!this._data.name.trim() || !this._data.broadlink_remote) {
+        this._error = "Enter a device name and choose a BroadLink remote on the Settings tab.";
+        return false;
+      }
+      return true;
+    }
+    _commands() {
+      const commands = standardCommands.map(([key, name, symbol]) => ({
+        key,
+        name,
+        symbol,
+        kind: "ir_codes",
+        ref: this._data.ir_codes[key],
+        required: key === "power_on" || key === "power_off"
+      }));
+      const colors = defaultColors.map(([name, hex]) => ({ name, rgb: hexToRgb(hex) }));
+      for (const saved of this._data.colors) {
+        const preset = colors.find((color) => color.name === saved.name);
+        if (preset) Object.assign(preset, saved);
+        else colors.push(saved);
+      }
+      commands.push(...colors.map((color) => ({ ...color, key: `color:${color.name}`, kind: "colors", ref: color.ir_code })));
+      const effects = ["Flash", "Strobe", "Fade", "Smooth"].map((name) => ({ name }));
+      for (const saved of this._data.effects) {
+        const preset = effects.find((effect) => effect.name === saved.name);
+        if (preset) Object.assign(preset, saved);
+        else effects.push(saved);
+      }
+      commands.push(...effects.map((effect) => ({ ...effect, key: `effect:${effect.name}`, kind: "effects", ref: effect.ir_code, symbol: "mdi:lightbulb-auto" })));
+      return commands;
+    }
+    _commit(command, ref) {
+      if (command.kind === "ir_codes") this._data.ir_codes[command.key] = ref;
+      else {
+        this._data[command.kind] = this._data[command.kind].filter((item2) => item2.name !== command.name);
+        const item = { name: command.name, ir_code: ref };
+        if (command.kind === "colors") item.rgb = command.rgb;
+        this._data[command.kind].push(item);
+      }
+      command.ref = ref;
+      this._pending = void 0;
+      this.render();
+    }
+    _learn(command) {
+      if (!this._validSettings()) {
+        this.render();
+        return;
+      }
+      this._selected = command;
+      this._pending = void 0;
+      this._run(async () => {
+        const ref = await this._call("learn", { remote: this._data.broadlink_remote });
+        this._pending = { command, ref };
+      });
+    }
+    _save(another) {
+      if (!this._validSettings()) {
+        this._tab = "settings";
+        this.render();
+        return;
+      }
+      if (!this._data.ir_codes.power_on || !this._data.ir_codes.power_off) {
+        this._error = "Learn Power on and Power off before saving. Other commands are optional.";
+        this._tab = "commands";
+        this.render();
+        return;
+      }
+      this._run(async () => {
+        const result = await this._call("save_device", {
+          definition: this._data,
+          request_id: this._requestId,
+          ...this._entry ? { entry_id: this._entry.entry_id, revision: this._entry.revision } : {},
+          ...this._deviceId ? { device_id: this._deviceId } : {}
+        });
+        showToast(this, "IR light saved");
+        if (!another) {
+          this._close();
+          return;
+        }
+        this._helpers = await this._call("devices");
+        this._entry = this._helpers.find((entry) => entry.entry_id === result.entry_id);
+        const remote = this._data.broadlink_remote;
+        this._data = { ...emptyDevice(), broadlink_remote: remote };
+        this._requestId = crypto.randomUUID();
+        this._deviceId = void 0;
+        this._selected = this._pending = void 0;
+        this._tab = "settings";
+      });
+    }
+    _settings() {
+      const form = nativeForm(this._hass, [
+        { name: "name", label: "Device name", required: true, selector: { text: {} } },
+        { name: "broadlink_remote", label: "BroadLink remote", required: true, disabled: Boolean(this._deviceId), selector: { entity: { domain: "remote", integration: "broadlink" } } },
+        { name: "brightness_steps", label: "Brightness steps", helper: "Number of brightness button presses from minimum to maximum.", required: true, selector: { number: { min: 1, max: 100, step: 1, mode: "box" } } },
+        ...!this._deviceId ? [{ name: "helper", label: "Save in helper", selector: { select: { options: [
+          { value: "new", label: "Create a new helper" },
+          ...this._helpers.map((entry) => ({ value: entry.entry_id, label: `${entry.title} (${entry.devices.length} ${entry.devices.length === 1 ? "light" : "lights"})` }))
+        ] } } }] : []
+      ], { ...this._data, helper: this._entry?.entry_id || "new" }, (values) => {
+        const { helper, ...fields } = values;
+        Object.assign(this._data, fields);
+        if (!this._deviceId) this._entry = this._helpers.find((entry) => entry.entry_id === helper);
+      });
+      form.disabled = this._busy;
+      return form;
+    }
+    _details() {
+      const command = this._selected;
+      const details = el("section", void 0, "remote-command-details");
+      details.append(el("h3", command.name));
+      if (command.kind === "colors") {
+        const currentHex = rgbToHex(command.rgb);
+        const palette = nativeForm(this._hass, [{
+          name: "preset",
+          label: "Default color",
+          selector: { select: { options: [
+            ...defaultColors.map(([name, hex2]) => ({ label: name, value: hex2 })),
+            { label: "Custom color", value: "custom" }
+          ] } }
+        }], { preset: defaultColors.some(([, hex2]) => hex2 === currentHex) ? currentHex : "custom" }, (values) => {
+          if (values.preset === "custom") return;
+          command.rgb = hexToRgb(values.preset);
+          this._hex.value = values.preset;
+          this._invalidHex = false;
+          this._hex.invalid = false;
+          learn.disabled = this._busy;
+        });
+        const hex = nativeTextField("Custom color hex (#RRGGBB)", rgbToHex(command.rgb), (value) => {
+          const rgb = hexToRgb(value);
+          hex.invalid = !rgb;
+          if (rgb) command.rgb = rgb;
+          this._invalidHex = !rgb;
+          palette.data = { preset: defaultColors.some(([, hex2]) => hex2.toLowerCase() === value.toLowerCase()) ? value.toLowerCase() : "custom" };
+          learn.disabled = this._busy || !rgb;
+        });
+        this._hex = hex;
+        hex.disabled = this._busy;
+        palette.disabled = this._busy;
+        details.append(palette, hex);
+      }
+      const actions = el("div", void 0, "remote-editor-actions");
+      const learn = button(command.ref ? "Replace command" : "Learn command", () => this._learn(command), this._busy, "primary");
+      actions.append(learn);
+      if (command.ref) {
+        actions.append(button("Test command", () => this._run(() => this._hass.callService("remote", "send_command", {
+          entity_id: this._data.broadlink_remote,
+          ...typeof command.ref === "string" ? { command: "b64:" + command.ref.replace(/^b64:/, "") } : command.ref
+        })), this._busy));
+        if (command.kind === "colors") actions.append(button("Update color", () => {
+          if (this._invalidHex) return;
+          this._commit(command, command.ref);
+        }, this._busy));
+        actions.append(button("Remove command", () => {
+          if (command.kind === "ir_codes") delete this._data.ir_codes[command.key];
+          else this._data[command.kind] = this._data[command.kind].filter((item) => item.name !== command.name);
+          this._selected = void 0;
+          this.render();
+        }, this._busy));
+      }
+      details.append(actions);
+      return details;
+    }
+    _addOptional(kind) {
+      this._adding = kind;
+      this._optionalName = "";
+      this.render();
+    }
+    _commandPage() {
+      const page = el("div", void 0, "remote-editor");
+      page.append(el("p", "Click a command to learn it. Power on and Power off are required. Learn only the optional buttons your remote has."));
+      if (this._busy) page.append(notice("Point the physical remote at your BroadLink and press the selected button. Learning and testing can take up to 65 seconds.", "status"));
+      if (this._pending) {
+        const confirmation = notice(`Did ${this._pending.command.name} work when the test command was sent?`, "status");
+        confirmation.append(button("Yes, keep command", () => this._commit(this._pending.command, this._pending.ref)), button("Retry", () => this._learn(this._pending.command)), button("Discard", () => {
+          this._pending = void 0;
+          this.render();
+        }));
+        page.append(confirmation);
+      }
+      if (this._selected && !this._pending) page.append(this._details());
+      const grid = el("div", void 0, "remote-command-grid");
+      grid.setAttribute("aria-label", "Remote commands");
+      for (const command of this._commands()) {
+        const tile = el("button", void 0, "remote-command");
+        tile.type = "button";
+        tile.disabled = this._busy || Boolean(this._pending);
+        tile.dataset.required = String(Boolean(command.required));
+        tile.dataset.learned = String(Boolean(command.ref));
+        tile.setAttribute("aria-pressed", String(command.key === this._selected?.key));
+        if (command.rgb) {
+          const swatch = el("span", void 0, "remote-command-color");
+          swatch.style.backgroundColor = rgbToHex(command.rgb);
+          tile.append(swatch);
+        } else tile.append(icon(command.symbol));
+        tile.append(el("span", command.name), el("small", `${command.required ? "Required" : "Optional"} \xB7 ${command.ref ? "Learned" : "Not learned"}`));
+        tile.addEventListener("click", () => {
+          this._invalidHex = false;
+          this._selected = command;
+          if (command.ref) this.render();
+          else this._learn(command);
+        });
+        grid.append(tile);
+      }
+      page.append(grid);
+      if (this._adding) {
+        const kind = this._adding;
+        const name = nativeTextField("Command name", this._optionalName, (value) => {
+          this._optionalName = value;
+        });
+        page.append(name, button("Add command", () => {
+          const name2 = this._optionalName.trim();
+          if (!name2) {
+            this._error = "Enter a command name.";
+            this.render();
+            return;
+          }
+          const key = `${kind === "colors" ? "color" : "effect"}:${name2}`;
+          if (this._commands().some((command) => command.key === key)) {
+            this._error = "Choose a different command name.";
+            this.render();
+            return;
+          }
+          this._selected = { kind, key, name: name2, ...kind === "colors" ? { rgb: [255, 0, 0] } : {} };
+          this._adding = void 0;
+          this.render();
+        }, this._busy));
+      } else {
+        const actions = el("div", void 0, "remote-editor-actions");
+        actions.append(button("Add custom color", () => this._addOptional("colors"), this._busy || Boolean(this._pending)), button("Add effect", () => this._addOptional("effects"), this._busy || Boolean(this._pending)));
+        page.append(actions);
+      }
+      return page;
+    }
+    render() {
+      if (!this._data) return;
+      const page = el("section", void 0, "remote-editor");
+      page.append(el("h2", this._deviceId ? `Edit ${this._data.name}` : "Add IR light"));
+      const tabBar = tabs([
+        { value: "settings", label: "Settings" },
+        { value: "commands", label: "Commands" }
+      ], this._tab, (value) => {
+        if (this._busy || this._pending) return;
+        this._tab = value;
+        this.render();
+      }, "IR light setup");
+      for (const tab of tabBar.querySelectorAll("[role=tab]")) tab.disabled = this._busy || Boolean(this._pending);
+      page.append(tabBar);
+      if (this._error) page.append(notice(this._error, "error"));
+      if (this._ready) page.append(this._tab === "settings" ? this._settings() : this._commandPage());
+      else page.append(el("p", "Loading Home Assistant controls\u2026"));
+      const actions = el("div", void 0, "remote-editor-actions");
+      actions.append(button("Cancel", () => this._close(), this._busy));
+      if (this._tab === "settings") actions.append(button("Learn commands", () => {
+        if (this._validSettings()) this._tab = "commands";
+        this.render();
+      }, this._busy, "primary"));
+      actions.append(button("Save and add another", () => this._save(true), this._busy || Boolean(this._pending)), button("Save", () => this._save(false), this._busy || Boolean(this._pending), "primary"));
+      page.append(actions);
+      this.shadowRoot.replaceChildren(el("style", remoteEditorStyles + tabStyles), page);
+    }
+  };
+  customElements.define("ha-plus-ir-device-editor", IRDeviceEditor);
+
+  // src/translations/en.json
+  var en_default2 = {
+    command_failed_check_the_broadlink_remote_and_retry: "Command failed. Check the BroadLink remote and retry.",
+    choose_an_ir_light: "Choose an IR light",
+    select_a_ha_ir_entity_in_the_card_editor_or_add_your_first_device: "Select a HA+ IR entity in the card editor, or add your first device.",
+    set_up_an_ir_light: "Set up an IR light",
+    remote_unavailable: "Remote unavailable",
+    sending_command: "Sending command\u2026",
+    on_assumed_state: "On \xB7 Assumed state",
+    off_assumed_state: "Off \xB7 Assumed state",
+    turn_off: "Turn off",
+    turn_on: "Turn on",
+    entity_details: "Entity details",
+    integration_settings: "Integration settings",
+    brightness: "Brightness",
+    estimated: "{value1}% \xB7 Estimated",
+    release_to_send: "{value1}% \xB7 Release to send",
+    steps_ir_brightness_is_approximate: "{value1} steps \xB7 IR brightness is approximate",
+    colors: "Colors",
+    effects: "Effects",
+    "common.retry": "Retry",
+    resync_to_full_brightness: "Resync to full brightness",
+    device_settings: "Device settings \u2197",
+    local_control: "{value1} {value2} \xB7 Local control",
+    add_device: "Add device",
+    your_remotes_made_simple: "Your remotes, made simple",
+    power_colors_and_effects_without_reaching_for_the_remote_ir_devices_report_assumed_st: "Power, colors, and effects \u2014 without reaching for the remote. IR devices report assumed state.",
+    bring_your_ir_lights_into_ha: "Bring your IR lights into HA+",
+    add_a_device_choose_your_broadlink_remote_and_learn_its_buttons_no_yaml_or_copied_cod: "Add a device, choose your BroadLink remote, and learn its buttons. No YAML or copied codes needed.",
+    automatic_ir_presets_effects_brightness_and_resynchronization: "Automatic IR presets, effects, brightness, and resynchronization",
+    command_sent: "Command sent"
+  };
+
   // src/ir-mapper.js
-  var t = (key, values) => localize(haContext(), en_default, key, values);
+  var t = (key, values) => localize(haContext(), en_default2, key, values);
   var manageUrl = "/config/integrations/integration/broadlink_ir_mapper";
-  var addUrl = "/config/integrations/dashboard/add?domain=broadlink_ir_mapper";
+  var addUrl = "/ha-plus-ir?setup=1";
   var devices = (hass) => Object.values(hass?.states || {}).filter((s) => s.attributes?.ir_mapper);
   var IRCard = class extends HTMLElement {
     _t(key, values) {
-      return localize(this._hass, en_default, key, values);
+      return localize(this._hass, en_default2, key, values);
     }
     constructor() {
       super();
@@ -1365,7 +1859,7 @@
       }
       if (this._hass.user?.is_admin) {
         const link = el("a", this._t("device_settings"));
-        link.href = manageUrl;
+        link.href = attr.ir_device_id ? `/ha-plus-ir?device=${encodeURIComponent(attr.ir_device_id)}` : manageUrl;
         footer.append(link);
       }
       surface.append(footer);
@@ -1373,7 +1867,7 @@
   };
   var IRPanel = class extends HTMLElement {
     _t(key, values) {
-      return localize(this._hass, en_default, key, values);
+      return localize(this._hass, en_default2, key, values);
     }
     set panel(value) {
       this._panel = value;
@@ -1392,11 +1886,19 @@
     set hass(value) {
       this._hass = value;
       applyPreferences(this, value);
+      if (this._editor) {
+        this._editor._hass = value;
+        return;
+      }
       const menu = this.shadowRoot.querySelector("ha-menu-button");
       if (menu) menu.hass = value;
       if (!this._built) {
         this._built = true;
         this.build();
+        const params = new URLSearchParams(window.location?.search || "");
+        if (value.user?.is_admin && (params.has("setup") || params.has("device"))) {
+          this._openEditor(params.get("device") || void 0);
+        }
       }
       const states = devices(value), ids = states.map((s) => s.entity_id).sort().join(",");
       if (ids !== this._ids) {
@@ -1405,17 +1907,43 @@
         for (const state of states) {
           const card = document.createElement("ha-plus-ir-card");
           card.setConfig({ entity: state.entity_id });
-          this._grid.append(card);
+          const item = el("section");
+          item.append(card);
+          if (value.user?.is_admin) item.append(button("Edit commands", () => this._openEditor(state.attributes.ir_device_id)));
+          this._grid.append(item);
         }
       }
       this._empty.hidden = states.length > 0;
       this._count.textContent = this._t("local_control", { value1: states.length, value2: states.length === 1 ? "device" : "devices" });
-      for (const card of this._grid.children) card.hass = value;
+      for (const card of this._grid.querySelectorAll("ha-plus-ir-card")) card.hass = value;
       this._add.hidden = !value.user?.is_admin;
     }
+    async _openEditor(deviceId) {
+      if (!this._hass.user?.is_admin) return;
+      try {
+        await loadNativeComponents(this);
+        const helpers = await this._hass.callWS({ type: "broadlink_ir_mapper/devices" });
+        const entry = helpers.find((entry2) => entry2.devices.some((device2) => device2.unique_id === deviceId));
+        const device = entry?.devices.find((device2) => device2.unique_id === deviceId);
+        if (deviceId && !device) throw new Error("This light is managed in YAML. Edit its YAML configuration to change commands.");
+        const editor = document.createElement("ha-plus-ir-device-editor");
+        this._editor = editor;
+        this._main.replaceChildren(editor);
+        await editor.configure(this._hass, helpers, device ? { entry, device } : void 0, () => {
+          this._editor = void 0;
+          if (window.location?.search) window.history.replaceState(null, "", window.location.pathname);
+          this._ids = void 0;
+          this.shadowRoot.replaceChildren();
+          this.build();
+          this.hass = this._hass;
+        });
+      } catch (error) {
+        this._main.prepend(notice(error.message || "Could not open device setup", "error"));
+      }
+    }
     build() {
-      this.shadowRoot.append(el("style", controlStyles));
-      const add = button(this._t("add_device"), () => navigate(this, integrationUrl("broadlink_ir_mapper", true)), false, "primary");
+      this.shadowRoot.append(el("style", controlStyles + collectionLayoutStyles));
+      const add = collectionCreateButton("Add Device", () => this._openEditor());
       this._add = add;
       const header = panelHeader("HA+ IR Mapper", {
         hass: this._hass,
@@ -1429,6 +1957,7 @@
       });
       this._count = el("p", "", "ha-plus-muted");
       const main = el("main");
+      this._main = main;
       main.append(
         el("p", this._t("your_remotes_made_simple"), "eyebrow"),
         el(
@@ -1458,7 +1987,7 @@
   };
   var IREditor = class extends HTMLElement {
     _t(key, values) {
-      return localize(this._hass, en_default, key, values);
+      return localize(this._hass, en_default2, key, values);
     }
     setConfig(config) {
       this._config = config;
@@ -1501,11 +2030,4 @@
     description: t("automatic_ir_presets_effects_brightness_and_resynchronization"),
     preview: true
   });
-  window.customIcons = window.customIcons || {};
-  window.customIcons["ha-plus-ir"] = {
-    getIcon: async (name) => name === "logo" ? {
-      path: "M486.983728,109.999628L486.983728,401.999167C486.983728,448.360304 449.344523,485.999328 402.983597,485.999328L110.983547,485.999328C64.622622,485.999328 26.983416,448.360304 26.983416,401.999167L26.983416,109.999628C26.983416,63.638491 64.622622,25.999467 110.983547,25.999467L402.983597,25.999467C449.344523,25.999467 486.983728,63.638491 486.983728,109.999628ZM203.646977,153.172678L85.650716,271.168815C55.389558,301.430480 55.389558,350.567689 85.650716,380.829354L132.153426,427.332080C162.415240,457.593745 211.552123,457.593745 241.813937,427.332080L359.810199,309.335943C390.072012,279.074278 390.072012,229.937069 359.810199,199.675404L313.307488,153.172678C283.046331,122.911013 233.908791,122.911013 203.646977,153.172678ZM319.921476,115.645046C317.786830,122.807673 321.868388,130.356146 329.030477,132.490709C339.847458,135.715703 350.562038,142.060339 359.741932,151.240768C368.922482,160.421198 375.267341,171.134943 378.492284,181.952698C380.626929,189.114655 388.175644,193.196561 395.337733,191.061327C402.500479,188.926094 406.582037,181.378292 404.446735,174.215665C400.031721,159.403909 391.463602,144.660599 378.892694,132.090101C366.322442,119.519602 351.578817,110.951156 336.767582,106.536417C329.604836,104.401183 322.056777,108.483089 319.921476,115.645046ZM332.780548,69.934142C330.645902,77.096769 334.727460,84.644571 341.890206,86.779804C359.894219,92.146742 377.747915,102.673939 393.028483,117.954748C408.309051,133.234886 418.836555,151.088444 424.203363,169.092984C426.338008,176.255611 433.886723,180.336846 441.048813,178.202284C448.211559,176.067050 452.293116,168.518578 450.157814,161.356621C443.600279,139.357410 430.849514,117.474287 412.179245,98.803409C393.508975,80.133203 371.625579,67.382867 349.626654,60.824842C342.463908,58.690279 334.915849,62.771514 332.780548,69.934142ZM271.081989,185.999715C271.081989,205.506160 274.111153,214.011755 287.344776,227.245167C294.480117,234.380545 300.389142,238.371353 306.332512,240.487868C311.542564,242.343239 317.364828,243.038403 326.983732,243.038403C345.781389,243.038403 345.781389,268.960973 326.983732,268.960973C317.343396,268.960973 311.528816,269.653718 306.327054,271.506293C300.393471,273.619503 294.489842,277.609258 287.344554,284.754431C274.125585,297.972850 271.081989,306.519798 271.081989,325.999661C271.081989,343.281375 242.885504,343.281375 242.885504,325.999661C242.885504,306.493216 239.856340,297.987621 226.622716,284.754209C219.487375,277.618831 213.578351,273.628024 207.634980,271.511508C202.424929,269.656137 196.602665,268.960973 186.983761,268.960973C168.186104,268.960973 168.186104,243.038403 186.983761,243.038403C196.624097,243.038403 202.438677,242.345658 207.640438,240.493083C213.574021,238.379873 219.477651,234.390118 226.622939,227.244945C239.841908,214.026526 242.885504,205.479578 242.885504,185.999715C242.885504,168.718001 271.081989,168.718001 271.081989,185.999715ZM203.386906,342.629770C203.386906,360.873489 188.597447,375.662945 170.353725,375.662945C152.110003,375.662945 137.320544,360.873489 137.320544,342.629770C137.320544,324.386051 152.110003,309.596595 170.353725,309.596595C188.597447,309.596595 203.386906,324.386051 203.386906,342.629770Z",
-      viewBox: "0 0 513 512"
-    } : void 0
-  };
 })();

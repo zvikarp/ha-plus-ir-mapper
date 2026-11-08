@@ -16,7 +16,8 @@
         "description": "Rename or recalibrate this device, then learn or replace individual commands. The BroadLink remote is fixed to preserve its learned commands.",
         "data": {
           "name": "Device name",
-          "brightness_steps": "Brightness steps"
+          "brightness_steps": "Brightness steps",
+          "device": "Device"
         }
       },
       "settings": {
@@ -78,6 +79,9 @@
     },
     "progress": {
       "learning": "Point the physical remote at BroadLink and press the chosen button. Learning times out after 30 seconds."
+    },
+    "abort": {
+      "invalid_device": "The IR device configuration is invalid."
     }
   },
   "options": {
@@ -87,7 +91,8 @@
         "description": "Rename or recalibrate this device, then learn or replace individual commands. The BroadLink remote is fixed to preserve its learned commands.",
         "data": {
           "name": "Device name",
-          "brightness_steps": "Brightness steps"
+          "brightness_steps": "Brightness steps",
+          "device": "Device"
         }
       },
       "settings": {

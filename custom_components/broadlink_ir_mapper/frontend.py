@@ -23,6 +23,11 @@ async def async_register_frontend(hass):
         await hass.http.async_register_static_paths(
             [
                 StaticPathConfig(
+                    "/broadlink_ir_mapper/icon.js",
+                    str(Path(__file__).parent / "frontend/icon.js"),
+                    cache_headers=False,
+                ),
+                StaticPathConfig(
                     "/broadlink_ir_mapper/icon.png",
                     str(Path(__file__).parent / "brand/icon.png"),
                     cache_headers=False,
@@ -34,6 +39,7 @@ async def async_register_frontend(hass):
                 ),
             ]
         )
+        add_extra_js_url(hass, f"/broadlink_ir_mapper/icon.js?v={integration.version}")
         add_extra_js_url(hass, url)
         await async_register_panel(
             hass,

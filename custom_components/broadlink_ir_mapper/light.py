@@ -96,10 +96,12 @@ async def async_setup_platform(
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    definition = {**entry.data, **entry.options}
-    definition.pop("learned_device", None)
-    config = PLATFORM_SCHEMA({"platform": "broadlink_ir_mapper", **definition})
-    _add_entities(config, async_add_entities, entry)
+    from .devices import definitions
+
+    for definition in definitions(entry):
+        definition.pop("learned_device", None)
+        config = PLATFORM_SCHEMA({"platform": "broadlink_ir_mapper", **definition})
+        _add_entities(config, async_add_entities, entry)
 
 
 def _add_entities(config, async_add_entities, entry=None):
@@ -160,6 +162,7 @@ class BroadLinkIRLight(LightEntity):
     def extra_state_attributes(self):
         return {
             "ir_mapper": True,
+            "ir_device_id": self.unique_id,
             "ir_remote": self._remote,
             "ir_colors": [
                 {"name": c[CONF_NAME], "rgb": c["rgb"]} for c in self._colors

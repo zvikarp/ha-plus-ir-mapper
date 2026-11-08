@@ -12,6 +12,7 @@ from homeassistant.helpers import selector
 from homeassistant.util import slugify
 
 from . import DOMAIN
+from .devices import definitions, validate_definition
 from .light import PLATFORM_SCHEMA
 
 
@@ -312,6 +313,15 @@ class IRConfigFlow(DeviceEditor, config_entries.ConfigFlow, domain=DOMAIN):
             )
         return result
 
+    async def async_step_import(self, user_input):
+        try:
+            items = [validate_definition(d) for d in user_input["devices"]]
+            if not items:
+                return self.async_abort(reason="invalid_device")
+        except (vol.Invalid, KeyError, TypeError, ValueError):
+            return self.async_abort(reason="invalid_device")
+        return self.async_create_entry(title=items[0]["name"], data={"devices": items})
+
     def _save(self, data):
         return self.async_create_entry(title=data["name"], data=data)
 
@@ -326,10 +336,40 @@ class IROptionsFlow(DeviceEditor, config_entries.OptionsFlow):
         self._entry = entry
 
     async def async_step_init(self, user_input=None):
-        return await self._basics(
-            "init", user_input, deepcopy({**self._entry.data, **self._entry.options})
+        items = definitions(self._entry)
+        if len(items) > 1 and not hasattr(self, "_selected"):
+            if user_input is None:
+                return self.async_show_form(
+                    step_id="init",
+                    data_schema=vol.Schema(
+                        {
+                            vol.Required("device"): selector.SelectSelector(
+                                selector.SelectSelectorConfig(
+                                    options=[
+                                        {"value": d["unique_id"], "label": d["name"]}
+                                        for d in items
+                                    ]
+                                )
+                            )
+                        }
+                    ),
+                )
+            self._selected = user_input["device"]
+            user_input = None
+        defaults = next(
+            (d for d in items if d["unique_id"] == getattr(self, "_selected", None)),
+            items[0],
         )
+        return await self._basics("init", user_input, deepcopy(defaults))
 
     def _save(self, data):
-        self.hass.config_entries.async_update_entry(self._entry, title=data["name"])
+        items = definitions(self._entry)
+        if "devices" in self._entry.data or "devices" in self._entry.options:
+            data = {
+                "devices": [
+                    data if d["unique_id"] == data["unique_id"] else d for d in items
+                ]
+            }
+        else:
+            self.hass.config_entries.async_update_entry(self._entry, title=data["name"])
         return self.async_create_entry(title="", data=data)

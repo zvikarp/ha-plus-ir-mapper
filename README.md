@@ -36,6 +36,20 @@ The final path must be `config/custom_components/broadlink_ir_mapper/light.py`.
 The `docs` directory contains documentation, not integration code.
 Restart Home Assistant after installation or an upgrade.
 
+## In-app setup and multiple lights
+
+Open **HA+ IR Mapper → Add Device** to use the two-tab editor. **Settings** holds
+the device name, BroadLink remote, brightness steps, and destination helper.
+**Commands** shows a standard 24-button grid. Click a button to learn it, confirm
+the test response, or select a learned button to replace, test, or remove it.
+Power on and Power off are required. Brightness, colors, and effects are optional.
+Colors include presets and custom `#RRGGBB` values.
+
+Select an existing entry in **Save in helper** to add another light to it.
+**Save and add another** keeps that helper and remote selected for the next light.
+Each light gets its own entity and command mappings. **Edit commands** opens an
+existing light in the same editor. Changes take effect on Save.
+
 ## Guided setup and learning
 
 1. In **Settings → Devices & services → Add integration**, choose **HA+ IR Mapper**. Select an available BroadLink remote and name the light.
