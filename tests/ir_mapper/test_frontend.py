@@ -13,13 +13,18 @@ async def test_frontend_registration_is_serialized():
     )
     with (
         patch(
-            "homeassistant.loader.async_get_integration",
+            "custom_components.broadlink_ir_mapper.ha_plus_frontend.async_get_integration",
             return_value=SimpleNamespace(version="1.0.0"),
         ),
-        patch("custom_components.broadlink_ir_mapper.frontend.add_extra_js_url") as add,
         patch(
-            "custom_components.broadlink_ir_mapper.frontend.async_register_panel",
+            "custom_components.broadlink_ir_mapper.ha_plus_frontend.add_extra_js_url"
+        ) as add,
+        patch(
+            "custom_components.broadlink_ir_mapper.ha_plus_frontend.async_register_panel",
             new_callable=AsyncMock,
+            side_effect=lambda hass, **kwargs: hass.data.setdefault(
+                "frontend_panels", {}
+            ).update({kwargs["frontend_url_path"]: kwargs}),
         ) as panel,
     ):
         await asyncio.gather(
