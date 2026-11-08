@@ -1,4 +1,113 @@
 (() => {
+  // src/translations/en.json
+  var en_default = {
+    command_failed_check_the_broadlink_remote_and_retry: "Command failed. Check the BroadLink remote and retry.",
+    choose_an_ir_light: "Choose an IR light",
+    select_a_ha_ir_entity_in_the_card_editor_or_add_your_first_device: "Select a HA+ IR entity in the card editor, or add your first device.",
+    set_up_an_ir_light: "Set up an IR light",
+    remote_unavailable: "Remote unavailable",
+    sending_command: "Sending command\u2026",
+    on_assumed_state: "On \xB7 Assumed state",
+    off_assumed_state: "Off \xB7 Assumed state",
+    turn_off: "Turn off",
+    turn_on: "Turn on",
+    entity_details: "Entity details",
+    integration_settings: "Integration settings",
+    brightness: "Brightness",
+    estimated: "{value1}% \xB7 Estimated",
+    release_to_send: "{value1}% \xB7 Release to send",
+    steps_ir_brightness_is_approximate: "{value1} steps \xB7 IR brightness is approximate",
+    colors: "Colors",
+    effects: "Effects",
+    "common.retry": "Retry",
+    resync_to_full_brightness: "Resync to full brightness",
+    device_settings: "Device settings \u2197",
+    local_control: "{value1} {value2} \xB7 Local control",
+    add_device: "Add device",
+    your_remotes_made_simple: "Your remotes, made simple",
+    power_colors_and_effects_without_reaching_for_the_remote_ir_devices_report_assumed_st: "Power, colors, and effects \u2014 without reaching for the remote. IR devices report assumed state.",
+    bring_your_ir_lights_into_ha: "Bring your IR lights into HA+",
+    add_a_device_choose_your_broadlink_remote_and_learn_its_buttons_no_yaml_or_copied_cod: "Add a device, choose your BroadLink remote, and learn its buttons. No YAML or copied codes needed.",
+    automatic_ir_presets_effects_brightness_and_resynchronization: "Automatic IR presets, effects, brightness, and resynchronization",
+    command_sent: "Command sent"
+  };
+
+  // node_modules/@ha-plus/ui/src/dom.js
+  function el(tag, text, className) {
+    const node = document.createElement(tag);
+    if (text !== void 0) node.textContent = text;
+    if (className) node.className = className;
+    return node;
+  }
+  function icon(name) {
+    const node = el("ha-icon");
+    node.setAttribute("icon", name);
+    return node;
+  }
+  function button(text, handler, disabled = false, className) {
+    const registry = document.defaultView?.customElements;
+    const native = registry?.get("ha-button") ? "ha-button" : registry?.get("mwc-button") ? "mwc-button" : "button";
+    const node = el(native, text, className);
+    node.type = "button";
+    node.disabled = disabled;
+    if (native === "ha-button") node.appearance = className?.split(" ").includes("primary") ? "accent" : "plain";
+    if (native === "mwc-button") node.raised = Boolean(className?.split(" ").includes("primary"));
+    node.addEventListener("click", () => {
+      if (!node.disabled) handler();
+    });
+    return node;
+  }
+
+  // node_modules/@ha-plus/ui/src/native.js
+  function iconButton(label, name, handler, disabled = false) {
+    const node = el("ha-icon-button");
+    node.label = label;
+    node.disabled = disabled;
+    node.append(icon(name));
+    node.addEventListener("click", () => {
+      if (!node.disabled) handler();
+    });
+    return node;
+  }
+  function nativeForm(hass, schema, data, change) {
+    const form = el("ha-form");
+    form.hass = hass;
+    form.schema = schema;
+    form.data = data;
+    form.computeLabel = (field) => field.label;
+    form.computeHelper = (field) => field.helper;
+    form.addEventListener("value-changed", (event) => {
+      event.stopPropagation();
+      form.data = event.detail.value;
+      change(event.detail.value);
+    });
+    return form;
+  }
+  function nativeSlider({ label, value, min = 0, max = 100, step = 1, disabled = false, hass, preview, change }) {
+    const native = Boolean(document.defaultView?.customElements.get("ha-control-slider"));
+    const tag = native ? "ha-control-slider" : document.defaultView?.customElements.get("ha-slider") ? "ha-slider" : "input";
+    const control = el(tag);
+    if (tag === "input") control.type = "range";
+    Object.assign(control, { min, max, step, value, disabled });
+    control.label = label;
+    control.locale = hass?.locale;
+    control.setAttribute("aria-label", label);
+    let committed = Number(value);
+    const read = (event) => Number(event.detail?.value ?? control.value);
+    control.addEventListener(native ? "slider-moved" : "input", (event) => {
+      if (native && event.detail?.value == null) return;
+      const next = read(event);
+      if (!control.disabled && Number.isFinite(next)) preview?.(next);
+    });
+    control.addEventListener(native ? "value-changed" : "change", (event) => {
+      const next = read(event);
+      if (control.disabled || !Number.isFinite(next) || next < min || next > max || next === committed) return;
+      committed = next;
+      change(next);
+    });
+    return control;
+  }
+
   // node_modules/@ha-plus/ui/src/styles.js
   var themeStyles = `
   :host { display:block; color:var(--primary-text-color,#212121); font-family:var(--primary-font-family,var(--paper-font-body1_-_font-family,Roboto,sans-serif)); }
@@ -24,7 +133,7 @@
   .listbox { position:absolute; z-index:10; inset-inline:0; top:100%; margin-top:4px; max-height:300px; overflow:auto; padding:6px; background:var(--card-background-color,#fff); border:1px solid var(--divider-color,#e0e0e0); border-radius:14px; box-shadow:var(--ha-card-box-shadow,0 4px 16px #0003); }
   .option { display:block; width:100%; text-align:start; border-radius:10px; background:transparent; color:var(--primary-text-color,#212121); white-space:normal; overflow-wrap:anywhere; }
   .option[aria-selected=true] { color:var(--primary-color,#03a9f4); background:var(--secondary-background-color,#f5f5f5); }
-  .ha-plus-header { display:flex; align-items:center; gap:12px; padding:12px 16px; min-height:64px; background:var(--app-header-background-color,var(--primary-background-color,#fafafa)); color:var(--app-header-text-color,var(--primary-text-color,#212121)); }
+  .ha-plus-header { display:flex; align-items:center; gap:12px; padding:4px 16px; min-height:var(--header-height,56px); background:var(--app-header-background-color,var(--primary-background-color,#fafafa)); color:var(--app-header-text-color,var(--primary-text-color,#212121)); }
   .ha-plus-header h1 { font-size:20px; font-weight:400; flex:1; margin:0; }
   .ha-plus-content { max-width:1000px; margin:auto; padding:24px; }
   .notice { padding:12px 16px; margin-bottom:16px; background:var(--secondary-background-color,#f5f5f5); border-radius:14px; overflow-wrap:anywhere; }
@@ -36,7 +145,18 @@
   dialog form { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:12px; margin-top:24px; }
   @media(max-width:700px) { .ha-plus-content { padding:16px; } .ha-plus-header h1 { font-size:18px; } }
 `;
-  var appStyles = `${themeStyles}
+  var nativeStyles = `
+  .ha-plus-header-heading { flex: 1; min-width: 0; }
+  .ha-plus-header-heading h1 { overflow-wrap: anywhere; }
+  .ha-plus-header-heading p { margin: 4px 0 0; font-size: 12px; }
+  .ha-plus-dialog-message { white-space: pre-line; overflow-wrap: anywhere; padding: 8px 24px; }
+  .ha-plus-dialog-actions { display: flex; flex-wrap: wrap; justify-content: end; gap: 8px; }
+  ha-alert.notice { padding: 0; background: transparent; }
+  ha-form.field { min-width: 0; }
+  .ha-plus-header { min-height: var(--header-height, 56px); border-bottom: 1px solid var(--divider-color, #e0e0e0); }
+  ha-dialog { --mdc-dialog-min-width: min(420px, calc(100vw - 32px)); --mdc-dialog-max-width: 560px; }
+`;
+  var appStyles = `${themeStyles}${nativeStyles}
   :host {
     container-type: inline-size;
   }
@@ -426,14 +546,6 @@
   }
 `;
 
-  // node_modules/@ha-plus/ui/src/dom.js
-  function el(tag, text, className) {
-    const node = document.createElement(tag);
-    if (text !== void 0) node.textContent = text;
-    if (className) node.className = className;
-    return node;
-  }
-
   // node_modules/@ha-plus/ui/src/controls.js
   var controlStyles = `${appStyles}
 
@@ -678,14 +790,292 @@
     button2.style.backgroundColor = `rgb(${rgb.join(",")})`;
   }
 
+  // node_modules/@ha-plus/ui/src/preferences.js
+  function haContext() {
+    if (typeof window === "undefined") return void 0;
+    try {
+      return window.parent?.document.querySelector("home-assistant")?.hass || window.document.querySelector("home-assistant")?.hass;
+    } catch {
+      return void 0;
+    }
+  }
+  function preferences(hass = haContext()) {
+    const locale = hass?.locale || {};
+    const language = locale.language || hass?.language || "en";
+    const numberLocales = { comma_decimal: "en-US", decimal_comma: "de-DE", space_comma: "sv-SE" };
+    const numberLanguage = numberLocales[locale.number_format] || (locale.number_format === "system" && typeof navigator !== "undefined" ? navigator.language : language);
+    const direction = hass?.translationMetadata?.translations?.[language]?.isRTL || /^(ar|fa|he|ur)(-|$)/i.test(language) ? "rtl" : "ltr";
+    const dateLocales = { DMY: "en-GB", MDY: "en-US", YMD: "sv-SE" };
+    const dateLanguage = dateLocales[locale.date_format] || (locale.date_format === "system" && typeof navigator !== "undefined" ? navigator.language : language);
+    const timeLanguage = locale.time_format === "system" && typeof navigator !== "undefined" ? navigator.language : language;
+    const languageHour12 = new Intl.DateTimeFormat(timeLanguage, { hour: "numeric" }).resolvedOptions().hour12;
+    return {
+      dateLanguage,
+      language,
+      direction,
+      numberLanguage,
+      useGrouping: locale.number_format !== "none",
+      timeZone: locale.time_zone === "local" ? Intl.DateTimeFormat().resolvedOptions().timeZone : hass?.config?.time_zone,
+      hour12: ["12", "am_pm"].includes(locale.time_format) ? true : ["24", "twenty_four"].includes(locale.time_format) ? false : languageHour12,
+      unitSystem: { ...hass?.config?.unit_system }
+    };
+  }
+  function applyPreferences(host, hass) {
+    const value = preferences(hass);
+    if (host.getAttribute("dir") !== value.direction) host.setAttribute("dir", value.direction);
+    if (host.getAttribute("lang") !== value.language) host.setAttribute("lang", value.language);
+    return value;
+  }
+  function formatNumber(hass, value, options = {}) {
+    const settings = preferences(hass);
+    return new Intl.NumberFormat(settings.numberLanguage, { useGrouping: settings.useGrouping, ...options }).format(value);
+  }
+
+  // node_modules/@ha-plus/ui/src/translations/en.json
+  var en_default2 = {
+    save: "Save",
+    cancel: "Cancel",
+    close: "Close",
+    delete: "Delete",
+    edit: "Edit",
+    add: "Add",
+    refresh: "Refresh",
+    loading: "Loading\u2026",
+    retry: "Retry",
+    settings: "Settings",
+    yes: "Yes",
+    no: "No",
+    apply: "Apply",
+    confirm: "Confirm",
+    more_actions: "More actions",
+    dashboard_load_failed: "Home Assistant's dashboard controls could not load. Reload and try again.",
+    controls_load_failed: "Home Assistant's to-do controls could not load. Reload and try again.",
+    component_load_failed: "Home Assistant could not load {component}. Reload and try again."
+  };
+
+  // node_modules/@ha-plus/ui/src/localize.js
+  var nativeKeys = {
+    save: "ui.common.save",
+    cancel: "ui.common.cancel",
+    close: "ui.common.close",
+    delete: "ui.common.delete",
+    edit: "ui.common.edit",
+    add: "ui.common.add",
+    refresh: "ui.common.refresh",
+    loading: "ui.common.loading",
+    retry: "ui.common.retry",
+    yes: "ui.common.yes",
+    no: "ui.common.no",
+    apply: "ui.common.apply"
+  };
+  function localize(hass, messages, key, values = {}) {
+    const shortKey = key.replace(/^common\./, "");
+    const nativeKey = nativeKeys[shortKey];
+    const native = nativeKey && hass?.localize?.(nativeKey);
+    const message = native && native !== nativeKey ? native : messages[key] || en_default2[shortKey] || key;
+    return String(message).replace(/\{([\w]+)\}/g, (match, name) => {
+      if (!Object.hasOwn(values, name)) return match;
+      return typeof values[name] === "number" ? formatNumber(hass, values[name]) : String(values[name]);
+    });
+  }
+
+  // node_modules/@ha-plus/ui/src/loader.js
+  var nativeComponents;
+  async function loadNativeComponents(host) {
+    const required = ["ha-form", "ha-checkbox", "ha-dialog", "ha-icon-button"];
+    if (required.every((name) => customElements.get(name))) return;
+    if (!nativeComponents) {
+      nativeComponents = (async () => {
+        if (!window.loadCardHelpers) {
+          let resolver = host;
+          while (resolver && resolver.localName !== "partial-panel-resolver") {
+            resolver = resolver.parentElement || resolver.getRootNode().host;
+          }
+          const dashboard = Object.values(resolver?.routerOptions?.routes || {}).find((route) => route.tag === "ha-panel-lovelace");
+          if (!dashboard?.load) {
+            throw new Error(localize(host._hass, en_default2, "dashboard_load_failed"));
+          }
+          await dashboard.load();
+        }
+        const helpers = await window.loadCardHelpers();
+        const entities = helpers.createCardElement({ type: "entities", entities: [] });
+        await entities.constructor.getConfigElement();
+        helpers.createCardElement({ type: "todo-list", entity: "todo.ha_plus_ui" });
+        let loadingTimeout;
+        try {
+          await Promise.race([
+            customElements.whenDefined("hui-todo-list-card"),
+            new Promise((_, reject) => {
+              loadingTimeout = setTimeout(() => reject(new Error(localize(host._hass, en_default2, "controls_load_failed"))), 15e3);
+            })
+          ]);
+        } finally {
+          clearTimeout(loadingTimeout);
+        }
+        for (const name of required) {
+          if (!customElements.get(name)) {
+            throw new Error(localize(host._hass, en_default2, "component_load_failed", { component: name }));
+          }
+        }
+      })().catch((error) => {
+        nativeComponents = void 0;
+        throw error;
+      });
+    }
+    await nativeComponents;
+  }
+  async function loadNativeSlider(host) {
+    await loadNativeComponents(host);
+    if (customElements.get("ha-slider")) return;
+    const bootstrap = nativeForm(host._hass, [{
+      name: "value",
+      label: "",
+      selector: { number: { min: 0, max: 100, mode: "slider" } }
+    }], { value: 0 }, () => {
+    });
+    bootstrap.hidden = true;
+    host.shadowRoot.append(bootstrap);
+    let timeout;
+    try {
+      await Promise.race([
+        customElements.whenDefined("ha-slider"),
+        new Promise((_, reject) => {
+          timeout = setTimeout(() => reject(new Error(localize(host._hass, en_default2, "component_load_failed", { component: "ha-slider" }))), 15e3);
+        })
+      ]);
+    } finally {
+      clearTimeout(timeout);
+      bootstrap.remove();
+    }
+  }
+
+  // node_modules/@ha-plus/ui/src/ha-actions.js
+  function showMoreInfo(host, entityId) {
+    if (!/^[a-z_]+\.[a-z0-9_]+$/.test(entityId || "")) return false;
+    const root = host || (() => {
+      try {
+        return window.parent.document.querySelector("home-assistant");
+      } catch {
+        return void 0;
+      }
+    })();
+    if (!root) return false;
+    const Event = root.ownerDocument.defaultView.CustomEvent;
+    root.dispatchEvent(new Event("hass-more-info", { bubbles: true, composed: true, detail: { entityId } }));
+    return true;
+  }
+  function integrationUrl(domain, add = false) {
+    if (!/^[a-z0-9_]+$/.test(domain)) throw new TypeError("Invalid integration domain");
+    return add ? `/config/integrations/dashboard/add?domain=${domain}` : `/config/integrations/integration/${domain}`;
+  }
+  function showToast(host, message) {
+    if (!host) {
+      try {
+        host = window.parent.document.querySelector("home-assistant");
+      } catch {
+        return false;
+      }
+    }
+    if (!host) return false;
+    const Event = host.ownerDocument.defaultView.CustomEvent;
+    host.dispatchEvent(new Event("hass-notification", { bubbles: true, composed: true, detail: { message } }));
+    return true;
+  }
+  function overflowMenu(actions, label = localize(haContext(), {}, "more_actions")) {
+    const registry = document.defaultView?.customElements;
+    if (registry?.get("ha-dropdown")) {
+      const menu2 = el("ha-dropdown");
+      const trigger2 = iconButton(label, "mdi:dots-vertical", () => {
+      });
+      trigger2.slot = "trigger";
+      menu2.append(trigger2);
+      actions.forEach((action, index) => {
+        const item = el("ha-dropdown-item", action.label);
+        item.value = String(index);
+        item.disabled = Boolean(action.disabled);
+        menu2.append(item);
+      });
+      menu2.addEventListener("wa-select", (event) => {
+        const action = actions[Number(event.detail?.item?.value)];
+        if (action && !action.disabled) action.run();
+      });
+      return menu2;
+    }
+    if (registry?.get("ha-button-menu")) {
+      const menu2 = el("ha-button-menu");
+      const trigger2 = iconButton(label, "mdi:dots-vertical", () => {
+      });
+      trigger2.slot = "trigger";
+      menu2.append(trigger2);
+      for (const action of actions) {
+        const item = el("mwc-list-item", action.label);
+        item.disabled = Boolean(action.disabled);
+        item.addEventListener("click", () => {
+          if (!item.disabled) action.run();
+        });
+        menu2.append(item);
+      }
+      return menu2;
+    }
+    const menu = el("details", void 0, "ha-plus-overflow");
+    const trigger = el("summary", label);
+    menu.append(trigger);
+    for (const action of actions) {
+      const item = el("button", action.label);
+      item.type = "button";
+      item.disabled = Boolean(action.disabled);
+      item.addEventListener("click", () => {
+        if (!item.disabled) {
+          menu.open = false;
+          action.run();
+        }
+      });
+      menu.append(item);
+    }
+    return menu;
+  }
+  function navigate(host, path) {
+    if (!path.startsWith("/") || path.startsWith("//")) throw new TypeError("Navigation must stay within Home Assistant");
+    const view = host?.ownerDocument.defaultView || window.parent;
+    view.history.pushState(null, "", path);
+    view.dispatchEvent(new view.CustomEvent("location-changed", { detail: { replace: false } }));
+  }
+
   // node_modules/@ha-plus/ui/src/index.js
-  /*! @ha-plus/ui v0.3.0 | MIT | Copyright (c) 2026 HA+ contributors | https://github.com/zvikarp/ha-plus-packages/blob/main/LICENSE */
+  /*! @ha-plus/ui v0.4.0-rc.4 | MIT | Copyright (c) 2026 HA+ contributors | https://github.com/zvikarp/ha-plus-packages/blob/main/LICENSE */
+  function panelHeader(title, { hass, narrow, actions = [], subtitle } = {}) {
+    const header = el("header", void 0, "ha-plus-header");
+    const menu = el("ha-menu-button");
+    menu.hass = hass;
+    menu.narrow = narrow;
+    const heading = el("div", void 0, "ha-plus-header-heading");
+    heading.append(el("h1", title));
+    if (subtitle) heading.append(el("p", subtitle, "ha-plus-muted"));
+    header.append(menu, heading, ...actions);
+    return header;
+  }
+  function notice(message, kind = "status") {
+    if (!["status", "loading", "empty", "error"].includes(kind)) {
+      throw new TypeError("Unknown notice kind");
+    }
+    const native = Boolean(document.defaultView?.customElements.get("ha-alert"));
+    const node = el(native ? "ha-alert" : "div", message, kind === "error" ? "notice error" : "notice");
+    if (native) node.setAttribute("alert-type", kind === "error" ? "error" : "info");
+    node.setAttribute("role", kind === "error" ? "alert" : "status");
+    node.setAttribute("aria-live", kind === "error" ? "assertive" : "polite");
+    if (kind === "loading") node.setAttribute("aria-busy", "true");
+    return node;
+  }
 
   // src/ir-mapper.js
+  var t = (key, values) => localize(haContext(), en_default, key, values);
   var manageUrl = "/config/integrations/integration/broadlink_ir_mapper";
   var addUrl = "/config/integrations/dashboard/add?domain=broadlink_ir_mapper";
   var devices = (hass) => Object.values(hass?.states || {}).filter((s) => s.attributes?.ir_mapper);
   var IRCard = class extends HTMLElement {
+    _t(key, values) {
+      return localize(this._hass, en_default, key, values);
+    }
     constructor() {
       super();
       this.attachShadow({ mode: "open" });
@@ -698,11 +1088,26 @@
     }
     set hass(value) {
       this._hass = value;
+      applyPreferences(this, value);
+      if (value.connection && !this._nativeLoading && !this._nativeReady) {
+        this._nativeLoading = true;
+        loadNativeSlider(this).then(() => {
+          this._nativeReady = true;
+          this._uiError = void 0;
+          this.render();
+        }).catch((error) => {
+          this._uiError = error.message;
+          this.render();
+        }).finally(() => {
+          this._nativeLoading = false;
+        });
+      }
       const entity = value.states[this._config?.entity || devices(value)[0]?.entity_id];
       const signature = JSON.stringify([
         entity,
         value.states[entity?.attributes.ir_remote]?.state,
-        value.user?.is_admin
+        value.user?.is_admin,
+        value.locale
       ]);
       if (!this._editing && signature !== this._signature) {
         this._signature = signature;
@@ -719,12 +1124,9 @@
       return document.createElement("ha-plus-ir-card-editor");
     }
     _button(text, action, cls) {
-      const button2 = el("button", text, cls);
-      button2.dataset.focus = cls || text;
-      button2.type = "button";
-      button2.disabled = this._busy;
-      button2.addEventListener("click", action);
-      return button2;
+      const control = button(text, action, this._busy, cls);
+      control.dataset.focus = cls || text;
+      return control;
     }
     async _run(domain, service, data = {}) {
       if (this._busy) return;
@@ -737,8 +1139,11 @@
           entity_id: this._entityId,
           ...data
         });
+        this._retry = void 0;
+        showToast(this, this._t("command_sent"));
       } catch (err) {
-        this._error = err?.message || "Command failed. Check the BroadLink remote and retry.";
+        this._retry = () => this._run(domain, service, data);
+        this._error = err?.message || this._t("command_failed_check_the_broadlink_remote_and_retry");
       } finally {
         this._busy = false;
         this.render();
@@ -757,13 +1162,13 @@
       if (!state || !state.attributes.ir_mapper) {
         const empty = el("div", void 0, "empty");
         empty.append(
-          el("h2", "Choose an IR light"),
+          el("h2", this._t("choose_an_ir_light")),
           el(
             "p",
-            "Select a HA+ IR entity in the card editor, or add your first device."
+            this._t("select_a_ha_ir_entity_in_the_card_editor_or_add_your_first_device")
           )
         );
-        const link = el("a", "Set up an IR light");
+        const link = el("a", this._t("set_up_an_ir_light"));
         link.href = addUrl;
         empty.append(link);
         surface.append(empty);
@@ -778,60 +1183,66 @@
         el("span", void 0, `dot ${on && !unavailable ? "on" : ""}`),
         el(
           "span",
-          unavailable ? "Remote unavailable" : this._busy ? "Sending command\u2026" : on ? "On \xB7 Assumed state" : "Off \xB7 Assumed state"
+          unavailable ? this._t("remote_unavailable") : this._busy ? this._t("sending_command") : on ? this._t("on_assumed_state") : this._t("off_assumed_state")
         )
       );
       heading.append(
         el("h2", this._config.title || attr.friendly_name || entityId),
         status
       );
-      const power = this._button(
-        void 0,
-        () => this._run("light", on ? "turn_off" : "turn_on"),
-        `power ${on ? "on" : ""}`
-      );
-      power.setAttribute("aria-label", on ? "Turn off" : "Turn on");
+      const powerLabel = on ? this._t("turn_off") : this._t("turn_on");
+      const togglePower = () => this._run("light", on ? "turn_off" : "turn_on");
+      const nativePower = Boolean(customElements.get("ha-icon-button"));
+      const power = nativePower ? iconButton(powerLabel, "mdi:power", togglePower, this._busy || unavailable) : this._button(void 0, togglePower, `power ${on ? "on" : ""}`);
+      power.dataset.focus = "power";
+      power.setAttribute("aria-label", powerLabel);
       power.setAttribute("aria-pressed", String(on));
       power.disabled ||= unavailable;
-      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      svg.setAttribute("viewBox", "0 0 24 24");
-      svg.setAttribute("aria-hidden", "true");
-      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      path.setAttribute("fill", "currentColor");
-      path.setAttribute(
-        "d",
-        "M11 2h2v10h-2zM6.3 4.9l1.4 1.4A7 7 0 1 0 16.3 6.3l1.4-1.4a9 9 0 1 1-11.4 0"
-      );
-      svg.append(path);
-      power.append(svg);
-      top.append(heading, power);
+      if (!nativePower) {
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("viewBox", "0 0 24 24");
+        svg.setAttribute("aria-hidden", "true");
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("fill", "currentColor");
+        path.setAttribute(
+          "d",
+          "M11 2h2v10h-2zM6.3 4.9l1.4 1.4A7 7 0 1 0 16.3 6.3l1.4-1.4a9 9 0 1 1-11.4 0"
+        );
+        svg.append(path);
+        power.append(svg);
+      }
+      const actions = [{ label: this._t("entity_details"), run: () => showMoreInfo(this, entityId) }];
+      if (this._hass.user?.is_admin) actions.push({ label: this._t("integration_settings"), run: () => navigate(this, integrationUrl("broadlink_ir_mapper")) });
+      top.append(heading, power, overflowMenu(actions));
       surface.append(top);
       if (attr.ir_dimmable) {
         const section = el("section", void 0, "controls"), label = el("label", void 0, "label");
         label.htmlFor = "brightness";
         label.append(
-          el("span", "Brightness"),
+          el("span", this._t("brightness")),
           el(
             "span",
-            `${Math.round((attr.brightness || 0) / 255 * 100)}% \xB7 Estimated`
+            this._t("estimated", { value1: Math.round((attr.brightness || 0) / 255 * 100) })
           )
         );
-        const input = el("input");
-        input.type = "range";
+        const input = nativeSlider({
+          label: this._t("brightness"),
+          min: 1,
+          max: 255,
+          value: Number(attr.brightness || 255),
+          disabled: this._busy || unavailable,
+          hass: this._hass,
+          preview: (value) => {
+            this._editing = true;
+            label.lastChild.textContent = this._t("release_to_send", { value1: formatNumber(this._hass, Math.round(value / 255 * 100)) });
+          },
+          change: (value) => {
+            this._editing = false;
+            this._run("light", "turn_on", { brightness: value });
+          }
+        });
         input.dataset.focus = "brightness";
         input.id = "brightness";
-        input.min = "1";
-        input.max = "255";
-        input.value = String(attr.brightness || 255);
-        input.disabled = this._busy || unavailable;
-        input.addEventListener("input", () => {
-          this._editing = true;
-          label.lastChild.textContent = `${Math.round(input.value / 255 * 100)}% \xB7 Release to send`;
-        });
-        input.addEventListener("change", () => {
-          this._editing = false;
-          this._run("light", "turn_on", { brightness: Number(input.value) });
-        });
         input.addEventListener("blur", () => {
           this._editing = false;
         });
@@ -840,7 +1251,7 @@
           input,
           el(
             "div",
-            `${attr.ir_brightness_steps} steps \xB7 IR brightness is approximate`,
+            this._t("steps_ir_brightness_is_approximate", { value1: attr.ir_brightness_steps ?? "\u2014" }),
             "hint"
           )
         );
@@ -848,7 +1259,7 @@
       }
       if (attr.ir_colors?.length) {
         const section = el("section", void 0, "controls"), swatches = el("div", void 0, "swatches");
-        section.append(el("div", "Colors", "label"), swatches);
+        section.append(el("div", this._t("colors"), "label"), swatches);
         for (const color of attr.ir_colors) {
           const button2 = this._button(
             void 0,
@@ -872,7 +1283,7 @@
       }
       if (attr.effect_list?.length) {
         const section = el("section", void 0, "controls"), effects = el("div", void 0, "effects");
-        section.append(el("div", "Effects", "label"), effects);
+        section.append(el("div", this._t("effects"), "label"), effects);
         for (const effect of attr.effect_list) {
           const button2 = this._button(
             effect,
@@ -889,23 +1300,23 @@
         }
         surface.append(section);
       }
-      const error = this._error || attr.ir_last_error;
+      const error = this._uiError || this._error || attr.ir_last_error;
       if (error) {
-        const message = el("div", error, "error");
-        message.setAttribute("role", "alert");
+        const message = notice(error, "error");
+        if (this._retry && !unavailable) message.append(button(this._t("common.retry"), this._retry, this._busy));
         surface.append(message);
       }
       const footer = el("div", void 0, "footer");
       if (attr.ir_can_resynchronize) {
         const sync = this._button(
-          "Resync to full brightness",
+          this._t("resync_to_full_brightness"),
           () => this._run("broadlink_ir_mapper", "resynchronize")
         );
         sync.disabled ||= unavailable;
         footer.append(sync);
       }
       if (this._hass.user?.is_admin) {
-        const link = el("a", "Device settings \u2197");
+        const link = el("a", this._t("device_settings"));
         link.href = manageUrl;
         footer.append(link);
       }
@@ -913,12 +1324,23 @@
     }
   };
   var IRPanel = class extends HTMLElement {
+    _t(key, values) {
+      return localize(this._hass, en_default, key, values);
+    }
+    set narrow(value) {
+      this._narrow = value;
+      const menu = this.shadowRoot?.querySelector("ha-menu-button");
+      if (menu) menu.narrow = value;
+    }
     constructor() {
       super();
       this.attachShadow({ mode: "open" });
     }
     set hass(value) {
       this._hass = value;
+      applyPreferences(this, value);
+      const menu = this.shadowRoot.querySelector("ha-menu-button");
+      if (menu) menu.hass = value;
       if (!this._built) {
         this._built = true;
         this.build();
@@ -934,34 +1356,33 @@
         }
       }
       this._empty.hidden = states.length > 0;
-      this._count.textContent = `${states.length} ${states.length === 1 ? "device" : "devices"} \xB7 Local control`;
+      this._count.textContent = this._t("local_control", { value1: states.length, value2: states.length === 1 ? "device" : "devices" });
       for (const card of this._grid.children) card.hass = value;
       this._add.hidden = !value.user?.is_admin;
     }
     build() {
       this.shadowRoot.append(el("style", controlStyles));
-      const header = el("header"), heading = el("div", void 0, "heading");
-      this._count = el("p");
-      heading.append(el("h1", "HA+ IR"), this._count);
-      this._add = el("a", "\uFF0B Add device");
-      this._add.href = addUrl;
-      this._add.className = "primary action-link";
-      header.append(heading, this._add);
+      const add = el("a", this._t("add_device"), "primary action-link");
+      add.href = integrationUrl("broadlink_ir_mapper", true);
+      this._add = add;
+      const header = panelHeader("HA+ IR", { hass: this._hass, narrow: this._narrow, actions: [add] });
+      this._count = el("p", "", "ha-plus-muted");
+      header.querySelector(".ha-plus-header-heading").append(this._count);
       const main = el("main");
       main.append(
-        el("p", "Your remotes, made simple", "eyebrow"),
+        el("p", this._t("your_remotes_made_simple"), "eyebrow"),
         el(
           "p",
-          "Power, colors, and effects \u2014 without reaching for the remote. IR devices report assumed state.",
+          this._t("power_colors_and_effects_without_reaching_for_the_remote_ir_devices_report_assumed_st"),
           "intro"
         )
       );
       this._empty = el("section", void 0, "surface empty");
       this._empty.append(
-        el("h2", "Bring your IR lights into HA+"),
+        el("h2", this._t("bring_your_ir_lights_into_ha")),
         el(
           "p",
-          "Add a device, choose your BroadLink remote, and learn its buttons. No YAML or copied codes needed."
+          this._t("add_a_device_choose_your_broadlink_remote_and_learn_its_buttons_no_yaml_or_copied_cod")
         )
       );
       this._grid = el("div", void 0, "grid");
@@ -970,6 +1391,9 @@
     }
   };
   var IREditor = class extends HTMLElement {
+    _t(key, values) {
+      return localize(this._hass, en_default, key, values);
+    }
     setConfig(config) {
       this._config = config;
       this.render();
@@ -1008,7 +1432,7 @@
   window.customCards.push({
     type: "ha-plus-ir-card",
     name: "HA+ IR",
-    description: "Automatic IR presets, effects, brightness, and resynchronization",
+    description: t("automatic_ir_presets_effects_brightness_and_resynchronization"),
     preview: true
   });
   window.customIcons = window.customIcons || {};
