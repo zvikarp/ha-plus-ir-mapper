@@ -1,7 +1,7 @@
 {
   "domain": "broadlink_ir_mapper",
   "name": "HA+ IR Mapper",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "documentation": "https://github.com/zvikarp/ha-plus-ir-mapper",
   "requirements": [],
   "dependencies": [
