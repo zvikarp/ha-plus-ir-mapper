@@ -5,7 +5,7 @@ import vm from "node:vm";
 import { webcrypto } from "node:crypto";
 import { parseHTML } from "linkedom";
 const tick = () => new Promise((resolve) => setImmediate(resolve));
-async function setup({ fail = false, admin = true } = {}) {
+async function setup({ fail = false, admin = true, secureContext = true } = {}) {
 	const { window } = parseHTML("<html><body></body></html>");
 	const context = vm.createContext({
 		window,
@@ -16,7 +16,7 @@ async function setup({ fail = false, admin = true } = {}) {
 		console,
         URLSearchParams,
         structuredClone,
-        crypto: webcrypto,
+        crypto: secureContext ? webcrypto : { getRandomValues: webcrypto.getRandomValues.bind(webcrypto) },
 	});
 	vm.runInContext(
 		await readFile(
@@ -213,4 +213,131 @@ test("IR editing preserves commands until confirmed and accepts custom hex color
   assert.equal(calls.at(-1).device_id, "original");
   assert.equal(calls.at(-1).revision, "before");
   assert.deepEqual(Array.from(calls.at(-1).definition.colors[0].rgb), [18,52,171]);
+});
+
+async function setupDeviceEditor(options) {
+  const { window, hass } = await setup(options);
+  for (const name of ["ha-form", "ha-checkbox", "ha-dialog", "ha-icon-button"]) {
+    window.customElements.define(name, class extends window.HTMLElement {});
+  }
+  const editor = window.document.createElement("ha-plus-ir-device-editor");
+  window.document.body.append(editor);
+  await editor.configure(hass, [], undefined, () => {});
+  const click = text => {
+    const control = [...editor.shadowRoot.querySelectorAll("button")].find(button => button.textContent === text);
+    assert.ok(control, `Missing button: ${text}`);
+    control.click();
+  };
+  const settings = (remote = "remote.test") => editor.shadowRoot.querySelector("ha-form")
+    .dispatchEvent(new window.CustomEvent("value-changed", {
+      detail: { value: { name: "Desk", broadlink_remote: remote, brightness_steps: 8, helper: "new" } },
+    }));
+  return { window, hass, editor, click, settings };
+}
+
+test("guided setup allocates request IDs on local HTTP", async () => {
+  const { editor, settings, click } = await setupDeviceEditor({ secureContext: false });
+  settings();
+  click("Learn commands");
+  assert.equal(editor._tab, "commands");
+  assert.match(editor._requestId, /^[0-9a-f]{32}$/);
+});
+
+test("save and add another uses the committed helper without a second request", async () => {
+  const { editor, hass, settings, click } = await setupDeviceEditor();
+  settings();
+  const previousRequest = editor._requestId;
+  editor._data.ir_codes = { power_on: "JgBQAA==", power_off: "JgBQAQ==" };
+  const helper = { entry_id: "helper", title: "Desk", revision: "after", devices: [{ ...editor._data }] };
+  const calls = [];
+  hass.callWS = async msg => {
+    calls.push(msg);
+    if (msg.type !== "broadlink_ir_mapper/save_device") throw new Error("List is offline");
+    return { entry_id: helper.entry_id, revision: helper.revision, helper };
+  };
+  click("Save and add another");
+  await tick();
+  assert.deepEqual(calls.map(call => call.type), ["broadlink_ir_mapper/save_device"]);
+  assert.equal(editor._entry.revision, "after");
+  assert.equal(editor._data.name, "");
+  assert.equal(editor._data.broadlink_remote, "remote.test");
+  assert.notEqual(editor._requestId, previousRequest);
+});
+
+test("changing the remote in a new draft cannot strand confirmed learned commands", async () => {
+  const { editor, hass, settings, click } = await setupDeviceEditor();
+  hass.callWS = async () => ({ device: "captured", command: "on" });
+  settings();
+  click("Learn commands");
+  editor.shadowRoot.querySelector(".remote-command").click();
+  await tick();
+  click("Yes, keep command");
+  click("Settings");
+  const picker = editor.shadowRoot.querySelector("ha-form").schema
+    .find(field => field.name === "broadlink_remote");
+  assert.equal(picker.disabled, true);
+  settings("remote.replacement");
+  assert.equal(editor._data.broadlink_remote, "remote.test");
+});
+
+test("rerendering an invalid custom color does not re-enable learning", async () => {
+  const { editor, window, hass, settings, click } = await setupDeviceEditor();
+  const calls = [];
+  hass.callWS = async msg => { calls.push(msg); };
+  settings();
+  click("Learn commands");
+  click("Add custom color");
+  const name = editor.shadowRoot.querySelector("ha-textfield");
+  name.value = "Custom";
+  name.dispatchEvent(new window.Event("input"));
+  click("Add command");
+  const hex = editor.shadowRoot.querySelector("ha-textfield");
+  hex.value = "#invalid";
+  hex.dispatchEvent(new window.Event("input"));
+  editor.render();
+  assert.equal(editor.shadowRoot.querySelector("ha-textfield").invalid, true);
+  click("Learn command");
+  await tick();
+  assert.deepEqual(calls, []);
+});
+
+test("cancelling an IR brightness draft applies deferred state and never sends a command", async () => {
+  const { card, hass, window, calls } = await setup();
+  const slider = card.shadowRoot.querySelector("input");
+  slider.value = 160;
+  slider.dispatchEvent(new window.Event("input"));
+  hass.states["light.ir"].attributes.brightness = 200;
+  card.hass = hass;
+  assert.equal(card.shadowRoot.querySelector("input"), slider);
+  slider.dispatchEvent(new window.Event("pointercancel"));
+  assert.equal(Number(card.shadowRoot.querySelector("input").value), 200);
+  assert.deepEqual(calls, []);
+});
+
+test("an unavailable remote interrupts brightness editing immediately", async () => {
+  const { card, hass, window, calls } = await setup();
+  const slider = card.shadowRoot.querySelector("input");
+  slider.value = 160;
+  slider.dispatchEvent(new window.Event("input"));
+  hass.states["remote.test"].state = "unavailable";
+  card.hass = hass;
+  assert.equal(card.shadowRoot.querySelector("input").disabled, true);
+  slider.dispatchEvent(new window.Event("change"));
+  await tick();
+  assert.equal(calls.length, 0);
+});
+
+test("changing a card target prevents a retry from sending to a different light", async () => {
+  const { card, hass, calls } = await setup({ fail: true });
+  card.shadowRoot.querySelector(".effect").click();
+  await tick();
+  const retry = card.shadowRoot.querySelector('[role="alert"] button');
+  assert.ok(retry);
+  hass.states["light.other"] = { ...hass.states["light.ir"], entity_id: "light.other" };
+  card.setConfig({ entity: "light.other" });
+  const hasError = Boolean(card.shadowRoot.querySelector('[role="alert"]'));
+  retry.click();
+  await tick();
+  assert.equal(hasError, false);
+  assert.deepEqual(calls.map(call => call[2].entity_id), ["light.ir"]);
 });

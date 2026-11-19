@@ -16,6 +16,9 @@ const standardCommands = [
 export const hexToRgb = hex => /^#[0-9a-f]{6}$/i.test(hex)
   ? hex.slice(1).match(/../g).map(value => parseInt(value, 16)) : undefined;
 const rgbToHex = rgb => "#" + rgb.map(value => value.toString(16).padStart(2, "0")).join("");
+// randomUUID() requires HTTPS, but local Home Assistant can use plain HTTP.
+const newRequestId = () => Array.from(crypto.getRandomValues(new Uint8Array(16)),
+  byte => byte.toString(16).padStart(2, "0")).join("");
 const emptyDevice = () => ({ name: "", broadlink_remote: "", brightness_steps: 10, ir_codes: {}, colors: [], effects: [] });
 
 export class IRDeviceEditor extends HTMLElement {
@@ -30,7 +33,7 @@ export class IRDeviceEditor extends HTMLElement {
     this._entry = selected?.entry;
     this._deviceId = selected?.device.unique_id;
     this._data = selected ? structuredClone(selected.device) : emptyDevice();
-    this._requestId = crypto.randomUUID();
+    this._requestId = newRequestId();
     this._close = close;
     this.render();
     try {
@@ -59,6 +62,10 @@ export class IRDeviceEditor extends HTMLElement {
       return false;
     }
     return true;
+  }
+  get _remoteLocked() {
+    return Boolean(this._deviceId || Object.keys(this._data.ir_codes).length
+      || this._data.colors.length || this._data.effects.length);
   }
   _commands() {
     const commands = standardCommands.map(([key, name, symbol]) => ({
@@ -94,6 +101,7 @@ export class IRDeviceEditor extends HTMLElement {
     this.render();
   }
   _learn(command) {
+    if (command.kind === "colors" && this._invalidHex) return;
     if (!this._validSettings()) { this.render(); return; }
     this._selected = command;
     this._pending = undefined;
@@ -124,11 +132,14 @@ export class IRDeviceEditor extends HTMLElement {
       });
       showToast(this, "IR light saved");
       if (!another) { this._close(); return; }
-      this._helpers = await this._call("devices");
-      this._entry = this._helpers.find(entry => entry.entry_id === result.entry_id);
+      this._entry = result.helper;
+      this._helpers = [
+        ...this._helpers.filter(entry => entry.entry_id !== result.entry_id),
+        result.helper,
+      ];
       const remote = this._data.broadlink_remote;
       this._data = { ...emptyDevice(), broadlink_remote: remote };
-      this._requestId = crypto.randomUUID();
+      this._requestId = newRequestId();
       this._deviceId = undefined;
       this._selected = this._pending = undefined;
       this._tab = "settings";
@@ -137,14 +148,21 @@ export class IRDeviceEditor extends HTMLElement {
   _settings() {
     const form = nativeForm(this._hass, [
       { name: "name", label: "Device name", required: true, selector: { text: {} } },
-      { name: "broadlink_remote", label: "BroadLink remote", required: true, disabled: Boolean(this._deviceId), selector: { entity: { domain: "remote", integration: "broadlink" } } },
+      { name: "broadlink_remote", label: "BroadLink remote", required: true, disabled: this._remoteLocked, selector: { entity: { domain: "remote", integration: "broadlink" } } },
       { name: "brightness_steps", label: "Brightness steps", helper: "Number of brightness button presses from minimum to maximum.", required: true, selector: { number: { min: 1, max: 100, step: 1, mode: "box" } } },
       ...(!this._deviceId ? [{ name: "helper", label: "Save in helper", selector: { select: { options: [
         { value: "new", label: "Create a new helper" },
         ...this._helpers.map(entry => ({ value: entry.entry_id, label: `${entry.title} (${entry.devices.length} ${entry.devices.length === 1 ? "light" : "lights"})` })),
       ] } } }] : []),
     ], { ...this._data, helper: this._entry?.entry_id || "new" }, values => {
-      const { helper, ...fields } = values;
+      const { helper, broadlink_remote: remote, ...fields } = values;
+      if (remote !== undefined) {
+        if (this._remoteLocked && remote !== this._data.broadlink_remote) {
+          form.data = { ...values, broadlink_remote: this._data.broadlink_remote };
+        } else {
+          this._data.broadlink_remote = remote;
+        }
+      }
       Object.assign(this._data, fields);
       if (!this._deviceId) this._entry = this._helpers.find(entry => entry.entry_id === helper);
     });
@@ -192,7 +210,8 @@ export class IRDeviceEditor extends HTMLElement {
       details.append(palette, hex);
     }
     const actions = el("div", undefined, "remote-editor-actions");
-    const learn = button(command.ref ? "Replace command" : "Learn command", () => this._learn(command), this._busy, "primary");
+    const learn = button(command.ref ? "Replace command" : "Learn command",
+      () => this._learn(command), this._busy || (command.kind === "colors" && this._invalidHex), "primary");
     actions.append(learn);
     if (command.ref) {
       actions.append(button("Test command", () => this._run(() => this._hass.callService("remote", "send_command", {
@@ -203,6 +222,7 @@ export class IRDeviceEditor extends HTMLElement {
         if (command.kind === "ir_codes") delete this._data.ir_codes[command.key];
         else this._data[command.kind] = this._data[command.kind].filter(item => item.name !== command.name);
         this._selected = undefined;
+        this._invalidHex = false;
         this.render();
       }, this._busy));
     }
@@ -257,6 +277,7 @@ export class IRDeviceEditor extends HTMLElement {
         const key = `${kind === "colors" ? "color" : "effect"}:${name}`;
         if (this._commands().some(command => command.key === key)) { this._error = "Choose a different command name."; this.render(); return; }
         this._selected = { kind, key, name, ...(kind === "colors" ? { rgb: [255, 0, 0] } : {}) };
+        this._invalidHex = false;
         this._adding = undefined;
         this.render();
       }, this._busy));
