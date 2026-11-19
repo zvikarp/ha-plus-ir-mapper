@@ -264,3 +264,34 @@ async def test_brightness_endpoints(entity):
         await entity.async_turn_on(brightness=255)
         assert entity.brightness == 255
         assert send.await_count == 11
+
+
+async def test_calibrated_brightness_reaches_both_endpoints(hass):
+    hass.states.async_set("remote.test", "on")
+    light = BroadLinkIRLight(PLATFORM_SCHEMA(config(brightness_steps=50)))
+    light.hass = hass
+    light.async_write_ha_state = Mock()
+    light._attr_is_on = True
+    with patch(
+        "homeassistant.core.ServiceRegistry.async_call", new_callable=AsyncMock
+    ) as send:
+        await light.async_turn_on(brightness=1)
+        assert send.await_count == 50
+        assert light.brightness == 1
+        send.reset_mock()
+        await light.async_turn_on(brightness=255)
+        assert send.await_count == 50
+        assert light.brightness == 255
+
+
+async def test_partial_resync_publishes_successful_brightness_steps(entity):
+    with patch("homeassistant.core.ServiceRegistry.async_call", new_callable=AsyncMock):
+        await entity.async_turn_on(brightness=180)
+    with patch(
+        "homeassistant.core.ServiceRegistry.async_call",
+        side_effect=[None, None, None, HomeAssistantError("remote offline")],
+    ):
+        with pytest.raises(HomeAssistantError, match="remote offline"):
+            await entity.async_resynchronize()
+    assert entity.brightness == 230
+    assert entity.extra_state_attributes["ir_last_error"] == "remote offline"

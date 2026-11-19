@@ -150,6 +150,7 @@ class BroadLinkIRLight(LightEntity):
         self._attr_supported_color_modes = {mode}
         self._attr_color_mode = mode
         self._attr_brightness = 255 if mode != ColorMode.ONOFF else None
+        self._brightness_estimate = self._attr_brightness
         self._attr_rgb_color = tuple(self._colors[0]["rgb"]) if self._colors else None
         self._attr_effect = None
         self._command_lock = asyncio.Lock()
@@ -185,7 +186,8 @@ class BroadLinkIRLight(LightEntity):
                 self._attr_is_on = True
                 for _ in range(math.ceil(255 / self._brightness_step)):
                     await self._send_ir_command(self._codes["brightness_up"])
-                self._attr_brightness = 255
+                    self._advance_brightness(1)
+                self._brightness_estimate = self._attr_brightness = 255
             finally:
                 self.async_write_ha_state()
 
@@ -247,14 +249,14 @@ class BroadLinkIRLight(LightEntity):
         self._attr_effect = None
 
     async def _set_brightness(self, target: int) -> None:
-        """Estimate relative brightness in 25-point steps, bounded to 1..255 while on."""
+        """Send relative steps while retaining fractional estimates between presses."""
         current = self._attr_brightness
         if target == current:
             return
         direction = 1 if target > current else -1
         # Ignore sub-half-step differences without changing the estimate. This
         # keeps repeated absolute targets from oscillating around a 25-point step.
-        difference = abs(target - current)
+        difference = abs(target - self._brightness_estimate)
         steps = (
             math.ceil(difference / self._brightness_step)
             if target in (1, 255)
@@ -263,13 +265,13 @@ class BroadLinkIRLight(LightEntity):
         code = self._codes["brightness_up" if direction > 0 else "brightness_down"]
         for _ in range(steps):
             await self._send_ir_command(code)
-            self._attr_brightness = max(
-                1,
-                min(
-                    255,
-                    round(self._attr_brightness + direction * self._brightness_step),
-                ),
-            )
+            self._advance_brightness(direction)
+
+    def _advance_brightness(self, direction: int) -> None:
+        self._brightness_estimate = max(
+            1, min(255, self._brightness_estimate + direction * self._brightness_step)
+        )
+        self._attr_brightness = round(self._brightness_estimate)
 
     async def _send_ir_command(self, code: str | dict[str, str]) -> None:
         try:

@@ -67,7 +67,15 @@ async def test_add_to_legacy_helper_preserves_identity_and_is_retry_safe(hass):
     assert items[0] == original
     assert items[1]["unique_id"] != original["unique_id"]
     assert items[1]["ir_codes"] == original["ir_codes"]
-    await invoke(hass, save_device, msg)
+    helper = conn.send_result.call_args.args[1]["helper"]
+    assert helper == {
+        "entry_id": entry.entry_id,
+        "title": entry.title,
+        "revision": revision(entry),
+        "devices": items,
+    }
+    retry = await invoke(hass, save_device, msg)
+    assert retry.send_result.call_args.args[1]["helper"] == helper
     assert len(definitions(entry)) == 2
     changed_retry = {**msg, "definition": {**new, "name": "Different name"}}
     conn = await invoke(hass, save_device, changed_retry)

@@ -10,6 +10,12 @@ const manageUrl = "/config/integrations/integration/broadlink_ir_mapper";
 const addUrl = "/ha-plus-ir?setup=1";
 const devices = (hass) =>
 	Object.values(hass?.states || {}).filter((s) => s.attributes?.ir_mapper);
+const remoteUsable = (hass, state) => {
+    const remote = hass?.states?.[state?.attributes?.ir_remote];
+    return Boolean(hass?.connected !== false && state?.attributes?.ir_mapper
+        && !["unavailable", "unknown"].includes(state.state)
+        && remote && !["off", "unavailable", "unknown"].includes(remote.state));
+};
 
 class IRCard extends HTMLElement {
   _t(key, values) { return localize(this._hass, messages, key, values); }
@@ -41,6 +47,7 @@ class IRCard extends HTMLElement {
 			value.user?.is_admin,
             value.locale,
 		]);
+		if (this._editing && !remoteUsable(value, entity)) this._editing = false;
 		if (!this._editing && signature !== this._signature) {
 			this._signature = signature;
 			this.render();
@@ -61,8 +68,9 @@ class IRCard extends HTMLElement {
 
 		return control;
 	}
-	async _run(domain, service, data = {}) {
-		if (this._busy) return;
+	async _run(domain, service, data = {}, entityId = this._entityId) {
+		if (this._busy || entityId !== this._entityId
+            || !remoteUsable(this._hass, this._hass.states[entityId])) return;
 		const focus = this.shadowRoot.activeElement?.dataset.focus;
 		this._error = null;
 		this._busy = true;
@@ -72,16 +80,18 @@ class IRCard extends HTMLElement {
 				entity_id: this._entityId,
 				...data,
 			});
+            if (entityId !== this._entityId) return;
             this._retry = undefined;
             showToast(this, this._t("command_sent"));
 		} catch (err) {
-            this._retry = () => this._run(domain, service, data);
+            if (entityId !== this._entityId) return;
+            this._retry = () => this._run(domain, service, data, entityId);
 			this._error =
 				err?.message || this._t("command_failed_check_the_broadlink_remote_and_retry");
 		} finally {
 			this._busy = false;
 			this.render();
-			if (focus)
+			if (focus && entityId === this._entityId)
 				[...this.shadowRoot.querySelectorAll("[data-focus]")]
 					.find((el) => el.dataset.focus === focus)
 					?.focus();
@@ -90,6 +100,10 @@ class IRCard extends HTMLElement {
 	render() {
 		if (!this._hass || !this._config) return;
 		const entityId = this._config.entity || devices(this._hass)[0]?.entity_id;
+		if (entityId !== this._entityId) {
+            this._error = this._retry = undefined;
+            this._editing = false;
+        }
 		this._entityId = entityId;
 		const state = this._hass.states[entityId];
 		this.shadowRoot.replaceChildren(node("style", controlStyles));
@@ -112,11 +126,7 @@ class IRCard extends HTMLElement {
 		}
 		const attr = state.attributes,
 			on = state.state === "on";
-		const remote = this._hass.states[attr.ir_remote];
-		const unavailable =
-			["unavailable", "unknown"].includes(state.state) ||
-			!remote ||
-			["off", "unavailable", "unknown"].includes(remote.state);
+		const unavailable = !remoteUsable(this._hass, state);
 		const top = node("div", undefined, "top"),
 			heading = node("div", undefined, "heading");
 		const status = node("div", undefined, "status");
@@ -183,13 +193,21 @@ class IRCard extends HTMLElement {
                 label.lastChild.textContent = this._t("release_to_send", { value1: formatNumber(this._hass, Math.round(value / 255 * 100)) });
               },
               change: value => {
+                if (input.getRootNode() !== this.shadowRoot) return;
                 this._editing = false;
-                this._run("light", "turn_on", { brightness: value });
+                this._run("light", "turn_on", { brightness: value }, entityId);
               },
             });
             input.dataset.focus = "brightness";
             input.id = "brightness";
-            input.addEventListener("blur", () => { this._editing = false; });
+            const cancel = () => {
+              if (input.getRootNode() !== this.shadowRoot || !this._editing) return;
+              this._editing = false;
+              this._signature = undefined;
+              this.hass = this._hass;
+            };
+            input.addEventListener("blur", cancel);
+            input.addEventListener("pointercancel", cancel);
 			section.append(
 				label,
 				input,

@@ -1271,6 +1271,10 @@
   ];
   var hexToRgb = (hex) => /^#[0-9a-f]{6}$/i.test(hex) ? hex.slice(1).match(/../g).map((value) => parseInt(value, 16)) : void 0;
   var rgbToHex = (rgb) => "#" + rgb.map((value) => value.toString(16).padStart(2, "0")).join("");
+  var newRequestId = () => Array.from(
+    crypto.getRandomValues(new Uint8Array(16)),
+    (byte) => byte.toString(16).padStart(2, "0")
+  ).join("");
   var emptyDevice = () => ({ name: "", broadlink_remote: "", brightness_steps: 10, ir_codes: {}, colors: [], effects: [] });
   var IRDeviceEditor = class extends HTMLElement {
     constructor() {
@@ -1284,7 +1288,7 @@
       this._entry = selected?.entry;
       this._deviceId = selected?.device.unique_id;
       this._data = selected ? structuredClone(selected.device) : emptyDevice();
-      this._requestId = crypto.randomUUID();
+      this._requestId = newRequestId();
       this._close = close;
       this.render();
       try {
@@ -1318,6 +1322,9 @@
         return false;
       }
       return true;
+    }
+    get _remoteLocked() {
+      return Boolean(this._deviceId || Object.keys(this._data.ir_codes).length || this._data.colors.length || this._data.effects.length);
     }
     _commands() {
       const commands = standardCommands.map(([key, name, symbol]) => ({
@@ -1357,6 +1364,7 @@
       this.render();
     }
     _learn(command) {
+      if (command.kind === "colors" && this._invalidHex) return;
       if (!this._validSettings()) {
         this.render();
         return;
@@ -1398,11 +1406,14 @@
           this._close();
           return;
         }
-        this._helpers = await this._call("devices");
-        this._entry = this._helpers.find((entry) => entry.entry_id === result.entry_id);
+        this._entry = result.helper;
+        this._helpers = [
+          ...this._helpers.filter((entry) => entry.entry_id !== result.entry_id),
+          result.helper
+        ];
         const remote = this._data.broadlink_remote;
         this._data = { ...emptyDevice(), broadlink_remote: remote };
-        this._requestId = crypto.randomUUID();
+        this._requestId = newRequestId();
         this._deviceId = void 0;
         this._selected = this._pending = void 0;
         this._tab = "settings";
@@ -1411,14 +1422,21 @@
     _settings() {
       const form = nativeForm(this._hass, [
         { name: "name", label: "Device name", required: true, selector: { text: {} } },
-        { name: "broadlink_remote", label: "BroadLink remote", required: true, disabled: Boolean(this._deviceId), selector: { entity: { domain: "remote", integration: "broadlink" } } },
+        { name: "broadlink_remote", label: "BroadLink remote", required: true, disabled: this._remoteLocked, selector: { entity: { domain: "remote", integration: "broadlink" } } },
         { name: "brightness_steps", label: "Brightness steps", helper: "Number of brightness button presses from minimum to maximum.", required: true, selector: { number: { min: 1, max: 100, step: 1, mode: "box" } } },
         ...!this._deviceId ? [{ name: "helper", label: "Save in helper", selector: { select: { options: [
           { value: "new", label: "Create a new helper" },
           ...this._helpers.map((entry) => ({ value: entry.entry_id, label: `${entry.title} (${entry.devices.length} ${entry.devices.length === 1 ? "light" : "lights"})` }))
         ] } } }] : []
       ], { ...this._data, helper: this._entry?.entry_id || "new" }, (values) => {
-        const { helper, ...fields } = values;
+        const { helper, broadlink_remote: remote, ...fields } = values;
+        if (remote !== void 0) {
+          if (this._remoteLocked && remote !== this._data.broadlink_remote) {
+            form.data = { ...values, broadlink_remote: this._data.broadlink_remote };
+          } else {
+            this._data.broadlink_remote = remote;
+          }
+        }
         Object.assign(this._data, fields);
         if (!this._deviceId) this._entry = this._helpers.find((entry) => entry.entry_id === helper);
       });
@@ -1468,7 +1486,12 @@
         details.append(palette, hex);
       }
       const actions = el("div", void 0, "remote-editor-actions");
-      const learn = button(command.ref ? "Replace command" : "Learn command", () => this._learn(command), this._busy, "primary");
+      const learn = button(
+        command.ref ? "Replace command" : "Learn command",
+        () => this._learn(command),
+        this._busy || command.kind === "colors" && this._invalidHex,
+        "primary"
+      );
       actions.append(learn);
       if (command.ref) {
         actions.append(button("Test command", () => this._run(() => this._hass.callService("remote", "send_command", {
@@ -1479,6 +1502,7 @@
           if (command.kind === "ir_codes") delete this._data.ir_codes[command.key];
           else this._data[command.kind] = this._data[command.kind].filter((item) => item.name !== command.name);
           this._selected = void 0;
+          this._invalidHex = false;
           this.render();
         }, this._busy));
       }
@@ -1546,6 +1570,7 @@
             return;
           }
           this._selected = { kind, key, name: name2, ...kind === "colors" ? { rgb: [255, 0, 0] } : {} };
+          this._invalidHex = false;
           this._adding = void 0;
           this.render();
         }, this._busy));
@@ -1624,6 +1649,10 @@
   var manageUrl = "/config/integrations/integration/broadlink_ir_mapper";
   var addUrl = "/ha-plus-ir?setup=1";
   var devices = (hass) => Object.values(hass?.states || {}).filter((s) => s.attributes?.ir_mapper);
+  var remoteUsable = (hass, state) => {
+    const remote = hass?.states?.[state?.attributes?.ir_remote];
+    return Boolean(hass?.connected !== false && state?.attributes?.ir_mapper && !["unavailable", "unknown"].includes(state.state) && remote && !["off", "unavailable", "unknown"].includes(remote.state));
+  };
   var IRCard = class extends HTMLElement {
     _t(key, values) {
       return localize(this._hass, en_default2, key, values);
@@ -1661,6 +1690,7 @@
         value.user?.is_admin,
         value.locale
       ]);
+      if (this._editing && !remoteUsable(value, entity)) this._editing = false;
       if (!this._editing && signature !== this._signature) {
         this._signature = signature;
         this.render();
@@ -1680,8 +1710,8 @@
       control.dataset.focus = cls || text;
       return control;
     }
-    async _run(domain, service, data = {}) {
-      if (this._busy) return;
+    async _run(domain, service, data = {}, entityId = this._entityId) {
+      if (this._busy || entityId !== this._entityId || !remoteUsable(this._hass, this._hass.states[entityId])) return;
       const focus = this.shadowRoot.activeElement?.dataset.focus;
       this._error = null;
       this._busy = true;
@@ -1691,21 +1721,27 @@
           entity_id: this._entityId,
           ...data
         });
+        if (entityId !== this._entityId) return;
         this._retry = void 0;
         showToast(this, this._t("command_sent"));
       } catch (err) {
-        this._retry = () => this._run(domain, service, data);
+        if (entityId !== this._entityId) return;
+        this._retry = () => this._run(domain, service, data, entityId);
         this._error = err?.message || this._t("command_failed_check_the_broadlink_remote_and_retry");
       } finally {
         this._busy = false;
         this.render();
-        if (focus)
+        if (focus && entityId === this._entityId)
           [...this.shadowRoot.querySelectorAll("[data-focus]")].find((el2) => el2.dataset.focus === focus)?.focus();
       }
     }
     render() {
       if (!this._hass || !this._config) return;
       const entityId = this._config.entity || devices(this._hass)[0]?.entity_id;
+      if (entityId !== this._entityId) {
+        this._error = this._retry = void 0;
+        this._editing = false;
+      }
       this._entityId = entityId;
       const state = this._hass.states[entityId];
       this.shadowRoot.replaceChildren(el("style", controlStyles));
@@ -1727,8 +1763,7 @@
         return;
       }
       const attr = state.attributes, on = state.state === "on";
-      const remote = this._hass.states[attr.ir_remote];
-      const unavailable = ["unavailable", "unknown"].includes(state.state) || !remote || ["off", "unavailable", "unknown"].includes(remote.state);
+      const unavailable = !remoteUsable(this._hass, state);
       const top = el("div", void 0, "top"), heading = el("div", void 0, "heading");
       const status = el("div", void 0, "status");
       status.append(
@@ -1789,15 +1824,21 @@
             label.lastChild.textContent = this._t("release_to_send", { value1: formatNumber(this._hass, Math.round(value / 255 * 100)) });
           },
           change: (value) => {
+            if (input.getRootNode() !== this.shadowRoot) return;
             this._editing = false;
-            this._run("light", "turn_on", { brightness: value });
+            this._run("light", "turn_on", { brightness: value }, entityId);
           }
         });
         input.dataset.focus = "brightness";
         input.id = "brightness";
-        input.addEventListener("blur", () => {
+        const cancel = () => {
+          if (input.getRootNode() !== this.shadowRoot || !this._editing) return;
           this._editing = false;
-        });
+          this._signature = void 0;
+          this.hass = this._hass;
+        };
+        input.addEventListener("blur", cancel);
+        input.addEventListener("pointercancel", cancel);
         section.append(
           label,
           input,

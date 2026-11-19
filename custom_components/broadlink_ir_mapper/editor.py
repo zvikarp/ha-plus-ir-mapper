@@ -22,21 +22,34 @@ def remote_available(hass, entity_id):
         raise vol.Invalid("Choose an available BroadLink remote")
 
 
+def _helper(entry):
+    return {
+        "entry_id": entry.entry_id,
+        "title": entry.title,
+        "revision": revision(entry),
+        "devices": definitions(entry),
+    }
+
+
+def _send_saved_helper(connection, msg, entry):
+    helper = _helper(entry)
+    connection.send_result(
+        msg["id"],
+        {
+            "entry_id": helper["entry_id"],
+            "revision": helper["revision"],
+            "helper": helper,
+        },
+    )
+
+
 @websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/devices"})
 @websocket_api.require_admin
 @websocket_api.async_response
 async def list_devices(hass, connection, msg):
     connection.send_result(
         msg["id"],
-        [
-            {
-                "entry_id": entry.entry_id,
-                "title": entry.title,
-                "revision": revision(entry),
-                "devices": definitions(entry),
-            }
-            for entry in hass.config_entries.async_entries(DOMAIN)
-        ],
+        [_helper(entry) for entry in hass.config_entries.async_entries(DOMAIN)],
     )
 
 
@@ -116,13 +129,7 @@ async def save_device(hass, connection, msg):
                             raise vol.Invalid(
                                 "This light was already saved. Reopen it to make changes"
                             )
-                        connection.send_result(
-                            msg["id"],
-                            {
-                                "entry_id": saved_entry.entry_id,
-                                "revision": revision(saved_entry),
-                            },
-                        )
+                        _send_saved_helper(connection, msg, saved_entry)
                         return
             entry = None
             if "entry_id" in msg:
@@ -175,9 +182,7 @@ async def save_device(hass, connection, msg):
         except (vol.Invalid, KeyError, TypeError, ValueError) as err:
             connection.send_error(msg["id"], "save_failed", str(err))
             return
-        connection.send_result(
-            msg["id"], {"entry_id": entry.entry_id, "revision": revision(entry)}
-        )
+        _send_saved_helper(connection, msg, entry)
 
 
 def async_register_editor(hass):
