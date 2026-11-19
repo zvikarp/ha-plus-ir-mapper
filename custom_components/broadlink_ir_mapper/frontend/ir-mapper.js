@@ -1,5 +1,5 @@
 (() => {
-  // ../../../Users/zvikarp/zektec/repos/ha-plus/ha-plus-ir-mapper/node_modules/@ha-plus/ui/src/dom.js
+  // node_modules/@ha-plus/ui/src/dom.js
   function el(tag, text, className) {
     const node = document.createElement(tag);
     if (text !== void 0) node.textContent = text;
@@ -25,7 +25,7 @@
     return node;
   }
 
-  // ../../../Users/zvikarp/zektec/repos/ha-plus/ha-plus-ir-mapper/node_modules/@ha-plus/ui/src/native.js
+  // node_modules/@ha-plus/ui/src/native.js
   function iconButton(label, name, handler, disabled = false) {
     const node = el("ha-icon-button");
     node.label = label;
@@ -85,7 +85,7 @@
     return control;
   }
 
-  // ../../../Users/zvikarp/zektec/repos/ha-plus/ha-plus-ir-mapper/node_modules/@ha-plus/ui/src/styles.js
+  // node_modules/@ha-plus/ui/src/styles.js
   var panelHeaderStyles = `
   .ha-plus-header {
     position: sticky;
@@ -539,7 +539,7 @@
   }
 `;
 
-  // ../../../Users/zvikarp/zektec/repos/ha-plus/ha-plus-ir-mapper/node_modules/@ha-plus/ui/src/preferences.js
+  // node_modules/@ha-plus/ui/src/preferences.js
   function haContext() {
     if (typeof window === "undefined") return void 0;
     try {
@@ -580,7 +580,7 @@
     return new Intl.NumberFormat(settings.numberLanguage, { useGrouping: settings.useGrouping, ...options }).format(value);
   }
 
-  // ../../../Users/zvikarp/zektec/repos/ha-plus/ha-plus-ir-mapper/node_modules/@ha-plus/ui/src/translations/en.json
+  // node_modules/@ha-plus/ui/src/translations/en.json
   var en_default = {
     save: "Save",
     cancel: "Cancel",
@@ -602,7 +602,7 @@
     component_load_failed: "Home Assistant could not load {component}. Reload and try again."
   };
 
-  // ../../../Users/zvikarp/zektec/repos/ha-plus/ha-plus-ir-mapper/node_modules/@ha-plus/ui/src/localize.js
+  // node_modules/@ha-plus/ui/src/localize.js
   var nativeKeys = {
     save: "ui.common.save",
     cancel: "ui.common.cancel",
@@ -628,7 +628,7 @@
     });
   }
 
-  // ../../../Users/zvikarp/zektec/repos/ha-plus/ha-plus-ir-mapper/node_modules/@ha-plus/ui/src/ha-actions.js
+  // node_modules/@ha-plus/ui/src/ha-actions.js
   function showMoreInfo(host, entityId) {
     if (!/^[a-z_]+\.[a-z0-9_]+$/.test(entityId || "")) return false;
     const root = host || (() => {
@@ -720,7 +720,7 @@
     view.dispatchEvent(new view.CustomEvent("location-changed", { detail: { replace: false } }));
   }
 
-  // ../../../Users/zvikarp/zektec/repos/ha-plus/ha-plus-ir-mapper/node_modules/@ha-plus/ui/src/collection-layout.js
+  // node_modules/@ha-plus/ui/src/collection-layout.js
   var collectionLayoutStyles = `
   .ha-plus-collection-layout {
     --ha-plus-collection-header-height: var(--header-height, 56px);
@@ -795,7 +795,7 @@
     return control;
   }
 
-  // ../../../Users/zvikarp/zektec/repos/ha-plus/ha-plus-ir-mapper/node_modules/@ha-plus/ui/src/controls.js
+  // node_modules/@ha-plus/ui/src/controls.js
   var controlStyles = `${appStyles}
 
   .surface {
@@ -1035,7 +1035,7 @@
   @media (max-width: 450px) { .remote-command-grid { gap: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 `;
 
-  // ../../../Users/zvikarp/zektec/repos/ha-plus/ha-plus-ir-mapper/node_modules/@ha-plus/ui/src/loader.js
+  // node_modules/@ha-plus/ui/src/loader.js
   var nativeComponents;
   async function loadNativeComponents(host) {
     const required = ["ha-form", "ha-checkbox", "ha-dialog", "ha-icon-button"];
@@ -1105,7 +1105,7 @@
     }
   }
 
-  // ../../../Users/zvikarp/zektec/repos/ha-plus/ha-plus-ir-mapper/node_modules/@ha-plus/ui/src/footer.js
+  // node_modules/@ha-plus/ui/src/footer.js
   var footerStyles = `
   .ha-plus-footer {
     display: flex;
@@ -1142,7 +1142,7 @@
     return footer;
   }
 
-  // ../../../Users/zvikarp/zektec/repos/ha-plus/ha-plus-ir-mapper/node_modules/@ha-plus/ui/src/tabs.js
+  // node_modules/@ha-plus/ui/src/tabs.js
   var nextTabsId = 0;
   var tabStyles = `
   .ha-plus-tabs { display: flex; gap: 0; min-height: 48px; border-bottom: 1px solid var(--divider-color, #e0e0e0); }
@@ -1204,7 +1204,7 @@
     return list;
   }
 
-  // ../../../Users/zvikarp/zektec/repos/ha-plus/ha-plus-ir-mapper/node_modules/@ha-plus/ui/src/index.js
+  // node_modules/@ha-plus/ui/src/index.js
   /*! @ha-plus/ui v0.3.3 | MIT | Copyright (c) 2026 HA+ contributors | https://github.com/zvikarp/ha-plus-packages/blob/main/LICENSE */
   function panelHeader(title, { hass, narrow, actions = [], subtitle, domain, iconUrl, onRefresh, refreshing = false } = {}) {
     const header = el("header", void 0, "ha-plus-header");
